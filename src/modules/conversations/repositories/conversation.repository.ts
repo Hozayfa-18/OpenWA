@@ -49,9 +49,6 @@ export class ConversationRepository {
     contactName: string,
     phoneNumber: string | null,
   ): Promise<void> {
-    await this.repo.update(
-      { tenantId: this.tenantId, sessionId, chatId } as FindOptionsWhere<Conversation>,
-      { contactId, contactName, phoneNumber },
-    );
+    await this.updateByChat(sessionId, chatId, { contactId, contactName, phoneNumber });
   }
 }

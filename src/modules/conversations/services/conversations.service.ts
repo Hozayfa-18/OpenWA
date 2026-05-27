@@ -56,6 +56,11 @@ export class ConversationsService {
     const phoneNumber = waEntry ? (extractPhoneNumber(waEntry.chatId) ?? null) : null;
 
     await this.repo.linkContact(sessionId, chatId, contact.id, contact.name, phoneNumber);
+    this.eventsGateway.emitConversationUpdated(conversation.tenantId, {
+      tenantId: conversation.tenantId,
+      sessionId: conversation.sessionId,
+      chatId,
+    });
   }
 
   async markRead(sessionId: string, chatId: string): Promise<void> {

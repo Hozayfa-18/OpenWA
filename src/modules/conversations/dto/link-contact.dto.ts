@@ -1,7 +1,7 @@
-import { IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsUUID } from 'class-validator';
 
 export class LinkContactDto {
-  @IsString()
+  @IsNotEmpty()
   @IsUUID()
   contactId: string;
 }
