@@ -355,6 +355,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
                 messageId: msg.id ?? '',
                 messageAt: msg.timestamp ?? Math.floor(Date.now() / 1000),
                 direction: direction === MessageDirection.OUTGOING ? 'outgoing' : 'incoming',
+                from: msg.from ?? msg.chatId,
               };
 
               await this.applyConversationUpdate(jobData);

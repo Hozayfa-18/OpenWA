@@ -14,6 +14,7 @@ export interface ConversationUpdateJobData {
   messageId: string;
   messageAt: number;
   direction: 'incoming' | 'outgoing';
+  from?: string;
 }
 
 @Processor(QUEUE_NAMES.CONVERSATION_UPDATE)

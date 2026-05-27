@@ -478,6 +478,7 @@ export class MessageService {
       messageId: message.waMessageId ?? message.id,
       messageAt: this.toUnixSeconds(message.timestamp ?? Date.now()),
       direction: 'outgoing',
+      from: message.from,
     };
 
     if (this.conversationUpdateQueue) {
