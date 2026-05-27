@@ -555,8 +555,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     const lastMessageAt = new Date(data.messageAt * 1000);
     const phoneNumber =
       extractPhoneNumber(data.chatId) ??
-      extractPhoneNumber(data.from ?? '') ??
-      null;
+      (data.from ? extractPhoneNumber(data.from) : null);
 
     try {
       await this.conversationRepository.insert({

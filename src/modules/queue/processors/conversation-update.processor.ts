@@ -77,8 +77,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
 
     const phoneNumber =
       extractPhoneNumber(data.chatId) ??
-      extractPhoneNumber(data.from ?? '') ??
-      null;
+      (data.from ? extractPhoneNumber(data.from) : null);
 
     try {
       await this.repo.insert({
