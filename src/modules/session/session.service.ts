@@ -324,6 +324,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
               from?: string;
               to?: string;
               type?: string;
+              phoneNumber?: string;
             };
             const direction =
               msg.direction === MessageDirection.OUTGOING || msg.fromMe
@@ -357,6 +358,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
                 messageAt: msg.timestamp ?? Math.floor(Date.now() / 1000),
                 direction: direction === MessageDirection.OUTGOING ? 'outgoing' : 'incoming',
                 from: msg.from ?? msg.chatId,
+                phoneNumber: msg.phoneNumber,
               };
 
               await this.applyConversationUpdate(jobData);
@@ -554,6 +556,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
   private async applyConversationUpdate(data: ConversationUpdateJobData): Promise<void> {
     const lastMessageAt = new Date(data.messageAt * 1000);
     const phoneNumber =
+      data.phoneNumber ??
       extractPhoneNumber(data.chatId) ??
       (data.from ? extractPhoneNumber(data.from) : null);
 

@@ -184,6 +184,18 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
           }
         }
 
+        // Resolve real phone number for non-group chats (covers @lid contacts)
+        if (!incomingMessage.isGroup) {
+          try {
+            const contact = await msg.getContact();
+            if (contact.number) {
+              incomingMessage.phoneNumber = contact.number;
+            }
+          } catch {
+            // Phone resolution is best-effort; missing phoneNumber is handled downstream
+          }
+        }
+
         this.callbacks.onMessage?.(incomingMessage);
       } catch (error) {
         this.logger.error('Error processing incoming message', String(error));

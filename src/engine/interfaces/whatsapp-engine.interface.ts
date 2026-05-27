@@ -32,6 +32,7 @@ export interface IncomingMessage {
   timestamp: number;
   fromMe: boolean;
   isGroup: boolean;
+  phoneNumber?: string;
   media?: {
     mimetype: string;
     filename?: string;

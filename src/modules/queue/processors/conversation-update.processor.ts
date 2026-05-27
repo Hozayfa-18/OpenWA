@@ -16,6 +16,7 @@ export interface ConversationUpdateJobData {
   messageAt: number;
   direction: 'incoming' | 'outgoing';
   from?: string;
+  phoneNumber?: string;
 }
 
 @Processor(QUEUE_NAMES.CONVERSATION_UPDATE)
@@ -31,7 +32,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
   }
 
   async process(job: Job<ConversationUpdateJobData>): Promise<void> {
-    const { tenantId, sessionId, chatId, messageId, messageAt, direction, from } = job.data;
+    const { tenantId, sessionId, chatId, messageId, messageAt, direction, from, phoneNumber } = job.data;
     const lastMessageAt = new Date(messageAt * 1000);
     const wasCreated = await this.createOrUpdateConversation({
       tenantId,
@@ -41,6 +42,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
       lastMessageAt,
       direction,
       from,
+      phoneNumber,
     });
 
     if (wasCreated) {
@@ -68,6 +70,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
     lastMessageAt: Date;
     direction: 'incoming' | 'outgoing';
     from?: string;
+    phoneNumber?: string;
   }): Promise<boolean> {
     const where = {
       tenantId: data.tenantId,
@@ -76,6 +79,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
     } as FindOptionsWhere<Conversation>;
 
     const phoneNumber =
+      data.phoneNumber ??
       extractPhoneNumber(data.chatId) ??
       (data.from ? extractPhoneNumber(data.from) : null);
 
