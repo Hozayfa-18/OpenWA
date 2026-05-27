@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Repository } from 'typeorm';
@@ -79,7 +79,7 @@ describe('WebhookService', () => {
     service = module.get<WebhookService>(WebhookService);
   });
 
-  // â”€â”€ create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── create ────────────────────────────────────────────────────────
 
   describe('create', () => {
     it('should create a webhook with default events', async () => {
@@ -123,7 +123,7 @@ describe('WebhookService', () => {
     });
   });
 
-  // â”€â”€ findBySession / findAll / findOne â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── findBySession / findAll / findOne ──────────────────────────────
 
   describe('findBySession', () => {
     it('should return webhooks for a session', async () => {
@@ -163,7 +163,7 @@ describe('WebhookService', () => {
     });
   });
 
-  // â”€â”€ update â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── update ────────────────────────────────────────────────────────
 
   describe('update', () => {
     it('should update only provided fields', async () => {
@@ -178,7 +178,7 @@ describe('WebhookService', () => {
     });
   });
 
-  // â”€â”€ delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── delete ────────────────────────────────────────────────────────
 
   describe('delete', () => {
     it('should remove the webhook', async () => {
@@ -192,7 +192,7 @@ describe('WebhookService', () => {
     });
   });
 
-  // â”€â”€ dispatch (direct mode â€” queue disabled) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── dispatch (direct mode — queue disabled) ───────────────────────
 
   describe('dispatch (direct mode)', () => {
     const mockFetch = jest.fn();
@@ -285,7 +285,7 @@ describe('WebhookService', () => {
     });
   });
 
-  // â”€â”€ generateSignature (via dispatch) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── generateSignature (via dispatch) ──────────────────────────────
 
   describe('generateSignature', () => {
     it('should produce valid HMAC-SHA256 signature', async () => {
@@ -341,7 +341,7 @@ describe('WebhookService', () => {
     });
   });
 
-  // â”€â”€ dispatch (queue mode) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── dispatch (queue mode) ─────────────────────────────────────────
 
   describe('dispatch (queue mode)', () => {
     it('should add job to queue when queue is enabled', async () => {
@@ -405,4 +405,3 @@ describe('WebhookService', () => {
     });
   });
 });
-

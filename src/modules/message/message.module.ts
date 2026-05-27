@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MessageService } from './message.service';
 import { BulkMessageService } from './bulk-message.service';
@@ -18,4 +18,3 @@ const messageQueueModules = process.env.QUEUE_ENABLED === 'true' ? [QueueModule]
   exports: [MessageService, BulkMessageService],
 })
 export class MessageModule {}
-

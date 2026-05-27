@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { TenantContext } from '../../common/tenant/tenant-context.service';
@@ -50,4 +50,3 @@ export class ConversationsController {
     await this.conversationsService.markRead(sessionId, chatId);
   }
 }
-

@@ -1,4 +1,4 @@
-﻿import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -136,4 +136,3 @@ export class WebhookProcessor extends WorkerHost {
     }
   }
 }
-

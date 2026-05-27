@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -297,4 +297,3 @@ export class BulkMessageService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
-

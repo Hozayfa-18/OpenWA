@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable, ConflictException, NotFoundException, ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -66,4 +66,3 @@ export class UsersService {
     await this.repo.remove(user);
   }
 }
-

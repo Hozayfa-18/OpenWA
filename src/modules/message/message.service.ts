@@ -1,4 +1,4 @@
-﻿import { Injectable, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, BadRequestException, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
@@ -258,7 +258,7 @@ export class MessageService {
     // Save message as pending BEFORE sending
     const message = await this.saveOutgoingMessage(sessionId, {
       chatId: dto.chatId,
-      body: `ðŸ“ ${dto.description || 'Location'}`,
+      body: `📍 ${dto.description || 'Location'}`,
       type: 'location',
     });
 
@@ -297,7 +297,7 @@ export class MessageService {
     // Save message as pending BEFORE sending
     const message = await this.saveOutgoingMessage(sessionId, {
       chatId: dto.chatId,
-      body: `ðŸ“‡ ${dto.contactName}`,
+      body: `📇 ${dto.contactName}`,
       type: 'contact',
     });
 
@@ -584,4 +584,3 @@ export class MessageService {
     };
   }
 }
-

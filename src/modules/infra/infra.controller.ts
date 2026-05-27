@@ -138,9 +138,9 @@ export class InfraController {
 
   constructor(
     private readonly configService: ConfigService,
-    @InjectDataSource('main')
+    @InjectDataSource()
     private readonly mainDataSource: DataSource,
-    @InjectDataSource('data')
+    @InjectDataSource()
     private readonly dataDataSource: DataSource,
     private readonly engineFactory: EngineFactory,
     private readonly dockerService: DockerService,

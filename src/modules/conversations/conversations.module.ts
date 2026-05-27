@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TenantModule } from '../../common/tenant/tenant.module';
 import { Message } from '../message/entities/message.entity';
@@ -14,4 +14,3 @@ import { ConversationsService } from './services/conversations.service';
   exports: [ConversationsService],
 })
 export class ConversationsModule {}
-

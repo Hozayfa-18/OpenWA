@@ -1,4 +1,4 @@
-﻿import { Module, Global } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -65,4 +65,3 @@ import { ScopesGuard } from './guards/scopes.guard';
   exports: [AuthService, JwtAuthService, JwtAuthGuard, RolesGuard, ScopesGuard],
 })
 export class AuthModule {}
-

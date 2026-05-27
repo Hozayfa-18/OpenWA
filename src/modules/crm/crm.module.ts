@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WebhookModule } from '../webhook/webhook.module';
 import { CrmInboundWebhookController } from './controllers/crm-inbound-webhook.controller';
@@ -22,4 +22,3 @@ import { CrmUsersService } from './services/crm-users.service';
   exports: [CrmContactsService, CrmDealsService, CrmUsersService, CrmOutboundService],
 })
 export class CrmModule {}
-

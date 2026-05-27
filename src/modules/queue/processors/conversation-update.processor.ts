@@ -1,4 +1,4 @@
-﻿import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Job } from 'bullmq';
 import { FindOptionsWhere, Repository } from 'typeorm';
@@ -101,4 +101,3 @@ export class ConversationUpdateProcessor extends WorkerHost {
     }
   }
 }
-

@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash, randomBytes } from 'crypto';
@@ -58,21 +58,21 @@ export class AuthService implements OnModuleInit {
     const dashboardUrl = process.env.DASHBOARD_URL || `http://localhost:${process.env.DASHBOARD_PORT || 2886}`;
 
     this.logger.log('');
-    this.logger.log('â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”');
+    this.logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     this.logger.log('');
-    this.logger.log('  ðŸŸ¢ Welcome to OpenWA - WhatsApp API Gateway');
+    this.logger.log('  🟢 Welcome to OpenWA - WhatsApp API Gateway');
     this.logger.log('');
-    this.logger.log(`  ðŸ“Š Dashboard: ${dashboardUrl}`);
-    this.logger.log(`  ðŸ“š API Docs:  ${apiBaseUrl}/api/docs`);
+    this.logger.log(`  📊 Dashboard: ${dashboardUrl}`);
+    this.logger.log(`  📚 API Docs:  ${apiBaseUrl}/api/docs`);
     this.logger.log('');
     if (isNewKey) {
-      this.logger.log('  ðŸ”‘ API Key (newly created):');
+      this.logger.log('  🔑 API Key (newly created):');
     } else {
-      this.logger.log('  ðŸ”‘ API Key:');
+      this.logger.log('  🔑 API Key:');
     }
     this.logger.log(`     ${displayKey}`);
     this.logger.log('');
-    this.logger.log('â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”');
+    this.logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     this.logger.log('');
   }
 
@@ -303,4 +303,3 @@ export class AuthService implements OnModuleInit {
     return roleHierarchy[apiKey.role] >= roleHierarchy[requiredRole];
   }
 }
-

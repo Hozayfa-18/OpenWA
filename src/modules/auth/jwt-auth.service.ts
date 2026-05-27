@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable, ConflictException, UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -120,4 +120,3 @@ export class JwtAuthService {
     return createHash('sha256').update(raw).digest('hex');
   }
 }
-

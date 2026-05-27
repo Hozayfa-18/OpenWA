@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
@@ -86,7 +86,7 @@ describe('MessageService', () => {
     service = module.get<MessageService>(MessageService);
   });
 
-  // â”€â”€ sendText â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── sendText ──────────────────────────────────────────────────────
 
   describe('sendText', () => {
     it('should send text message and return messageId + timestamp', async () => {
@@ -155,7 +155,7 @@ describe('MessageService', () => {
     });
   });
 
-  // â”€â”€ sendImage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── sendImage ─────────────────────────────────────────────────────
 
   describe('sendImage', () => {
     it('should send image via URL', async () => {
@@ -186,7 +186,7 @@ describe('MessageService', () => {
     });
   });
 
-  // â”€â”€ sendVideo / sendAudio / sendDocument / sendSticker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── sendVideo / sendAudio / sendDocument / sendSticker ────────────
 
   describe('sendVideo', () => {
     it('should call engine.sendVideoMessage', async () => {
@@ -232,7 +232,7 @@ describe('MessageService', () => {
     });
   });
 
-  // â”€â”€ sendLocation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── sendLocation ──────────────────────────────────────────────────
 
   describe('sendLocation', () => {
     it('should send location with lat/lng', async () => {
@@ -251,7 +251,7 @@ describe('MessageService', () => {
     });
   });
 
-  // â”€â”€ sendContact â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── sendContact ───────────────────────────────────────────────────
 
   describe('sendContact', () => {
     it('should send contact with name and number', async () => {
@@ -269,7 +269,7 @@ describe('MessageService', () => {
     });
   });
 
-  // â”€â”€ reply / forward â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── reply / forward ───────────────────────────────────────────────
 
   describe('reply', () => {
     it('should call engine.replyToMessage with quotedMessageId', async () => {
@@ -311,7 +311,7 @@ describe('MessageService', () => {
     });
   });
 
-  // â”€â”€ saveIncomingMessage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── saveIncomingMessage ───────────────────────────────────────────
 
   describe('saveIncomingMessage', () => {
     it('should save with INCOMING direction', async () => {
@@ -331,7 +331,7 @@ describe('MessageService', () => {
     });
   });
 
-  // â”€â”€ buildMediaInput (via sendImage) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── buildMediaInput (via sendImage) ───────────────────────────────
 
   describe('buildMediaInput validation', () => {
     it('should throw when neither url nor base64 is provided', async () => {
@@ -350,17 +350,17 @@ describe('MessageService', () => {
     });
   });
 
-  // â”€â”€ reactToMessage / deleteMessage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── reactToMessage / deleteMessage ────────────────────────────────
 
   describe('reactToMessage', () => {
     it('should call engine.reactToMessage', async () => {
       await service.reactToMessage('sess-1', {
         chatId: 'test@c.us',
         messageId: 'wa-msg-1',
-        emoji: 'ðŸ‘',
+        emoji: '👍',
       });
 
-      expect(mockEngine.reactToMessage).toHaveBeenCalledWith('test@c.us', 'wa-msg-1', 'ðŸ‘');
+      expect(mockEngine.reactToMessage).toHaveBeenCalledWith('test@c.us', 'wa-msg-1', '👍');
     });
   });
 
@@ -385,4 +385,3 @@ describe('MessageService', () => {
     });
   });
 });
-

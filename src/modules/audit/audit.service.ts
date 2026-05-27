@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThan } from 'typeorm';
 import { AuditLog, AuditAction, AuditSeverity } from './entities/audit-log.entity';
@@ -123,4 +123,3 @@ export class AuditService {
     return result.affected || 0;
   }
 }
-

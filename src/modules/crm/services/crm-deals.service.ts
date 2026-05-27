@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TenantContext } from '../../../common/tenant/tenant-context.service';
@@ -40,4 +40,3 @@ export class CrmDealsService {
     return { upserted: items.length };
   }
 }
-

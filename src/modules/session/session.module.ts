@@ -1,4 +1,4 @@
-﻿import { Module, forwardRef } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Session } from './entities/session.entity';
 import { SessionService } from './session.service';
@@ -17,4 +17,3 @@ import { Conversation } from '../conversations/entities/conversation.entity';
   exports: [SessionService],
 })
 export class SessionModule {}
-

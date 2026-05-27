@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
@@ -135,4 +135,3 @@ describe('JwtAuthService', () => {
     });
   });
 });
-

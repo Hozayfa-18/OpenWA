@@ -1,4 +1,4 @@
-﻿import { Injectable, Scope } from '@nestjs/common';
+import { Injectable, Scope } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { TenantContext } from '../../../common/tenant/tenant-context.service';
@@ -42,4 +42,3 @@ export class ConversationRepository {
     );
   }
 }
-
