@@ -30,28 +30,33 @@ export class CrmContactsService {
       return { upserted: 0 };
     }
 
-    await this.repo.upsert(
-      items.map(item => ({
-        id: item.id,
-        tenantId,
-        name: item.name,
-        responsibleUserId: item.responsibleUserId ?? null,
-        contactData: item.contactData,
-        uri: item.uri ?? null,
-      })),
-      { conflictPaths: ['tenantId', 'id'], skipUpdateIfNoValuesChanged: true },
-    );
-
-    // Propagate name and phone changes to all conversations linked to these contacts
-    for (const item of items) {
-      const waEntry = item.contactData?.find(e => e.chatType === 'whatsapp');
-      const phoneNumber = waEntry ? (extractPhoneNumber(waEntry.chatId) ?? null) : null;
-
-      await this.conversationRepo.update(
-        { tenantId, contactId: item.id },
-        { contactName: item.name, ...(phoneNumber !== null ? { phoneNumber } : {}) },
+    await this.repo.manager.transaction(async manager => {
+      await manager.upsert(
+        Contact,
+        items.map(item => ({
+          id: item.id,
+          tenantId,
+          name: item.name,
+          responsibleUserId: item.responsibleUserId ?? null,
+          contactData: item.contactData,
+          uri: item.uri ?? null,
+        })),
+        { conflictPaths: ['tenantId', 'id'], skipUpdateIfNoValuesChanged: true },
       );
-    }
+
+      // Propagate name and phone changes to all conversations linked to these contacts in parallel
+      await Promise.all(
+        items.map(item => {
+          const waEntry = item.contactData?.find(e => e.chatType === 'whatsapp');
+          const phoneNumber = waEntry ? (extractPhoneNumber(waEntry.chatId) ?? null) : null;
+          return manager.update(
+            Conversation,
+            { tenantId, contactId: item.id },
+            { contactName: item.name, ...(phoneNumber !== null ? { phoneNumber } : {}) },
+          );
+        }),
+      );
+    });
 
     return { upserted: items.length };
   }
