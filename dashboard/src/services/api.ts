@@ -80,6 +80,8 @@ export interface Conversation {
   chatId: string;
   contactId: string | null;
   assignedUserId: string | null;
+  phoneNumber: string | null;
+  contactName: string | null;
   lastMessageId: string;
   lastMessageAt: string;
   unreadCount: number;
@@ -334,6 +336,11 @@ export const conversationApi = {
   markRead: (sessionId: string, chatId: string) =>
     request<void>(`/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/read`, {
       method: 'PATCH',
+    }),
+  linkContact: (sessionId: string, chatId: string, contactId: string) =>
+    request<void>(`/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/contact`, {
+      method: 'PATCH',
+      body: JSON.stringify({ contactId }),
     }),
 };
 
