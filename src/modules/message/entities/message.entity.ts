@@ -14,12 +14,17 @@ export enum MessageStatus {
   FAILED = 'failed',
 }
 
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+
 @Entity('messages')
 @Index(['sessionId', 'createdAt'])
 @Index(['chatId'])
 export class Message {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'varchar', length: 36, default: DEFAULT_TENANT_ID })
+  tenantId: string;
 
   @Column()
   @Index()
