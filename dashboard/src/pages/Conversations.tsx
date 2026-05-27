@@ -114,7 +114,7 @@ export function Conversations() {
             <>
               <header className="thread-header">
                 <div className="thread-title">
-                  <strong>{selectedConversation.contactName ?? selectedConversation.phoneNumber ?? selectedConversation.chatId}</strong>
+                  <strong>{displayName(selectedConversation)}</strong>
                   {selectedConversation.contactName && selectedConversation.phoneNumber && (
                     <span className="thread-subtitle">{selectedConversation.phoneNumber}</span>
                   )}
