@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
 import { ApiKey, ApiKeyRole } from '../entities/api-key.entity';
-import { REQUIRED_ROLE_KEY, PUBLIC_KEY } from '../decorators/auth.decorators';
+import { REQUIRED_ROLE_KEY, PUBLIC_KEY, ROLES_KEY } from '../decorators/auth.decorators';
 import { RequestWithTenant } from '../../../common/tenant/request-with-tenant.interface';
 
 @Injectable()
@@ -21,6 +21,18 @@ export class ApiKeyGuard implements CanActivate {
     if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<RequestWithTenant & { apiKey?: ApiKey }>();
+    const authHeader = request.headers['authorization'];
+
+    if (authHeader?.startsWith('Bearer ') && !request.headers['x-api-key']) {
+      const requiredJwtRoles = this.reflector.getAllAndOverride(ROLES_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+      if (requiredJwtRoles) {
+        return true;
+      }
+    }
+
     const apiKeyHeader = this.extractApiKey(request);
 
     if (!apiKeyHeader) {
