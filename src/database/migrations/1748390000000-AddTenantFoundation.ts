@@ -65,9 +65,9 @@ export class AddTenantFoundation1748390000000 implements MigrationInterface {
       [DEFAULT_ID, DEFAULT_NAME, DEFAULT_SLUG],
     );
 
-    await queryRunner.query(`UPDATE sessions SET "tenantId" = $1 WHERE "tenantId" = '${LEGACY}'`, [DEFAULT_ID]);
-    await queryRunner.query(`UPDATE webhooks SET "tenantId" = $1 WHERE "tenantId" = '${LEGACY}'`, [DEFAULT_ID]);
-    await queryRunner.query(`UPDATE messages SET "tenantId" = $1 WHERE "tenantId" = '${LEGACY}'`, [DEFAULT_ID]);
+    await queryRunner.query(`UPDATE sessions SET "tenantId" = $1 WHERE "tenantId" = $2`, [DEFAULT_ID, LEGACY]);
+    await queryRunner.query(`UPDATE webhooks SET "tenantId" = $1 WHERE "tenantId" = $2`, [DEFAULT_ID, LEGACY]);
+    await queryRunner.query(`UPDATE messages SET "tenantId" = $1 WHERE "tenantId" = $2`, [DEFAULT_ID, LEGACY]);
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
