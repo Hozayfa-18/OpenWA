@@ -1,0 +1,41 @@
+import {
+  Entity, PrimaryGeneratedColumn, Column,
+  CreateDateColumn, UpdateDateColumn, Index,
+} from 'typeorm';
+
+export enum UserRole {
+  OWNER          = 'owner',
+  ADMIN          = 'admin',
+  MANAGER        = 'manager',
+  SALES_REP      = 'sales_rep',
+  QUALITY_CONTROL = 'quality_control',
+}
+
+@Entity('users')
+@Index(['tenantId', 'email'], { unique: true })
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'varchar', length: 36 })
+  @Index()
+  tenantId: string;
+
+  @Column({ type: 'varchar', length: 255 })
+  email: string;
+
+  @Column({ type: 'varchar', length: 60 })
+  passwordHash: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  name: string;
+
+  @Column({ type: 'varchar', length: 30, default: UserRole.SALES_REP })
+  role: UserRole;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+}
