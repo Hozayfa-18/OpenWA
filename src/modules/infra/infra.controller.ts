@@ -27,7 +27,7 @@ interface InfraStatus {
 
 interface SaveConfigDto {
   database?: {
-    type: 'sqlite' | 'postgres';
+    type: 'postgres';
     builtIn?: boolean;
     host?: string;
     port?: string;
@@ -139,9 +139,7 @@ export class InfraController {
   constructor(
     private readonly configService: ConfigService,
     @InjectDataSource()
-    private readonly mainDataSource: DataSource,
-    @InjectDataSource()
-    private readonly dataDataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly engineFactory: EngineFactory,
     private readonly dockerService: DockerService,
     private readonly cacheService: CacheService,
@@ -153,12 +151,9 @@ export class InfraController {
   @ApiOperation({ summary: 'Get infrastructure status' })
   @ApiResponse({ status: 200, description: 'Infrastructure status' })
   async getStatus(): Promise<InfraStatus> {
-    // Check both database connections
-    const mainDbConnected = this.mainDataSource.isInitialized;
-    const dataDbConnected = this.dataDataSource.isInitialized;
-    const dbConnected = mainDbConnected && dataDbConnected;
-    const dbType = this.configService.get<string>('dataDatabase.type', 'sqlite');
-    const dbHost = this.configService.get<string>('dataDatabase.host', 'localhost');
+    const dbConnected = this.dataSource.isInitialized;
+    const dbType = 'postgres';
+    const dbHost = this.configService.get<string>('database.host', 'localhost');
 
     const redisHost = process.env.REDIS_HOST || this.configService.get<string>('redis.host', 'localhost');
     const redisPort = parseInt(process.env.REDIS_PORT || '', 10) || this.configService.get<number>('redis.port', 6379);
@@ -221,7 +216,7 @@ export class InfraController {
       // Database
       if (config.database) {
         envLines.push('# Database');
-        envLines.push(`DATABASE_TYPE=${config.database.type || 'sqlite'}`);
+        envLines.push(`DATABASE_TYPE=postgres`);
         envLines.push(`POSTGRES_BUILTIN=${config.database.builtIn ? 'true' : 'false'}`);
         if (config.database.type === 'postgres') {
           if (config.database.builtIn) {
@@ -445,28 +440,28 @@ export class InfraController {
     counts: { sessions: number; webhooks: number; messages: number; messageBatches: number };
   }> {
     // Get all entities from Data DB
-    const sessions = await this.dataDataSource.query<SessionRow[]>('SELECT * FROM sessions');
-    const webhooks = await this.dataDataSource.query<WebhookRow[]>('SELECT * FROM webhooks');
+    const sessions = await this.dataSource.query<SessionRow[]>('SELECT * FROM sessions');
+    const webhooks = await this.dataSource.query<WebhookRow[]>('SELECT * FROM webhooks');
 
     // Messages table may not exist yet or be empty
     let messages: MessageRow[] = [];
     let messageBatches: MessageBatchRow[] = [];
 
     try {
-      messages = await this.dataDataSource.query<MessageRow[]>('SELECT * FROM messages');
+      messages = await this.dataSource.query<MessageRow[]>('SELECT * FROM messages');
     } catch (error) {
       this.logger.debug('Messages table not available for export', { error: String(error) });
     }
 
     try {
-      messageBatches = await this.dataDataSource.query<MessageBatchRow[]>('SELECT * FROM message_batches');
+      messageBatches = await this.dataSource.query<MessageBatchRow[]>('SELECT * FROM message_batches');
     } catch (error) {
       this.logger.debug('Message batches table not available for export', { error: String(error) });
     }
 
     return {
       exportedAt: new Date().toISOString(),
-      dataDbType: this.configService.get<string>('dataDatabase.type', 'sqlite'),
+      dataDbType: 'postgres',
       tables: {
         sessions,
         webhooks,
@@ -513,7 +508,7 @@ export class InfraController {
     warnings: string[];
   }> {
     const warnings: string[] = [];
-    const queryRunner = this.dataDataSource.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
