@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -31,7 +31,7 @@ describe('UsersService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        { provide: getRepositoryToken(User, 'data'), useValue: repo },
+        { provide: getRepositoryToken(User), useValue: repo },
         { provide: TenantContext, useValue: ctx },
       ],
     }).compile();
@@ -125,3 +125,4 @@ describe('UsersService', () => {
     });
   });
 });
+

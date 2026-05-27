@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
@@ -48,7 +48,7 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         {
-          provide: getRepositoryToken(ApiKey, 'main'),
+          provide: getRepositoryToken(ApiKey),
           useValue: repository,
         },
       ],
@@ -57,7 +57,7 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
   });
 
-  // ── createApiKey ──────────────────────────────────────────────────
+  // â”€â”€ createApiKey â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('createApiKey', () => {
     it('should generate a key with owa_k1_ prefix and save to DB', async () => {
@@ -99,7 +99,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ── findAll / findOne ─────────────────────────────────────────────
+  // â”€â”€ findAll / findOne â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('findAll', () => {
     it('should return all API keys ordered by createdAt DESC', async () => {
@@ -129,7 +129,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ── update ────────────────────────────────────────────────────────
+  // â”€â”€ update â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('update', () => {
     it('should update only the provided fields', async () => {
@@ -144,7 +144,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ── delete / revoke ───────────────────────────────────────────────
+  // â”€â”€ delete / revoke â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('delete', () => {
     it('should remove the API key from DB', async () => {
@@ -176,7 +176,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ── validateApiKey ────────────────────────────────────────────────
+  // â”€â”€ validateApiKey â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('validateApiKey', () => {
     it('should return the API key for a valid raw key', async () => {
@@ -249,7 +249,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ── hasPermission ─────────────────────────────────────────────────
+  // â”€â”€ hasPermission â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('hasPermission', () => {
     it('should allow ADMIN to access ADMIN routes', () => {
@@ -278,7 +278,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ── hashKey (via validateApiKey) ──────────────────────────────────
+  // â”€â”€ hashKey (via validateApiKey) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('hashKey (determinism)', () => {
     it('should produce the same hash for the same input', () => {
@@ -293,7 +293,7 @@ describe('AuthService', () => {
     });
   });
 
-  // ── isIpAllowed / ipInCidr (via validateApiKey) ───────────────────
+  // â”€â”€ isIpAllowed / ipInCidr (via validateApiKey) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('IP CIDR validation (via validateApiKey)', () => {
     it('should allow IP within CIDR range', async () => {
@@ -339,3 +339,4 @@ describe('AuthService', () => {
     });
   });
 });
+

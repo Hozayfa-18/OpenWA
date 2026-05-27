@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Session, SessionStatus } from '../session/entities/session.entity';
@@ -42,9 +42,9 @@ export interface SessionStats {
 @Injectable()
 export class StatsService {
   constructor(
-    @InjectRepository(Session, 'data')
+    @InjectRepository(Session)
     private readonly sessionRepo: Repository<Session>,
-    @InjectRepository(Message, 'data')
+    @InjectRepository(Message)
     private readonly messageRepo: Repository<Message>,
     private readonly cacheService: CacheService,
   ) {}
@@ -306,3 +306,4 @@ export class StatsService {
     return result;
   }
 }
+

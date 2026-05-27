@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MessageService } from './message.service';
 import { BulkMessageService } from './bulk-message.service';
@@ -12,9 +12,10 @@ import { Conversation } from '../conversations/entities/conversation.entity';
 const messageQueueModules = process.env.QUEUE_ENABLED === 'true' ? [QueueModule] : [];
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Message, MessageBatch, Conversation], 'data'), SessionModule, ...messageQueueModules],
+  imports: [TypeOrmModule.forFeature([Message, MessageBatch, Conversation]), SessionModule, ...messageQueueModules],
   controllers: [MessageController],
   providers: [MessageService, BulkMessageService],
   exports: [MessageService, BulkMessageService],
 })
 export class MessageModule {}
+

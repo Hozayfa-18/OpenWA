@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+﻿import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Job } from 'bullmq';
 import { FindOptionsWhere, Repository } from 'typeorm';
@@ -21,7 +21,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
   private readonly logger = createLogger('ConversationUpdateProcessor');
 
   constructor(
-    @InjectRepository(Conversation, 'data')
+    @InjectRepository(Conversation)
     private readonly repo: Repository<Conversation>,
     private readonly eventsGateway: EventsGateway,
   ) {
@@ -101,3 +101,4 @@ export class ConversationUpdateProcessor extends WorkerHost {
     }
   }
 }
+

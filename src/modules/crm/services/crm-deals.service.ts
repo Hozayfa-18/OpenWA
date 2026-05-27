@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TenantContext } from '../../../common/tenant/tenant-context.service';
@@ -8,7 +8,7 @@ import { Deal } from '../entities/deal.entity';
 @Injectable()
 export class CrmDealsService {
   constructor(
-    @InjectRepository(Deal, 'data')
+    @InjectRepository(Deal)
     private readonly repo: Repository<Deal>,
     private readonly ctx: TenantContext,
   ) {}
@@ -40,3 +40,4 @@ export class CrmDealsService {
     return { upserted: items.length };
   }
 }
+

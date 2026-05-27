@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
+﻿import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { TenantContext } from '../../common/tenant/tenant-context.service';
@@ -13,7 +13,7 @@ import { ConversationsService } from './services/conversations.service';
 export class ConversationsController {
   constructor(
     private readonly conversationsService: ConversationsService,
-    @InjectRepository(Message, 'data')
+    @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
     private readonly ctx: TenantContext,
   ) {}
@@ -50,3 +50,4 @@ export class ConversationsController {
     await this.conversationsService.markRead(sessionId, chatId);
   }
 }
+

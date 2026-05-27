@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
@@ -44,9 +44,9 @@ describe('JwtAuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JwtAuthService,
-        { provide: getRepositoryToken(Tenant, 'data'), useValue: tenantRepo },
-        { provide: getRepositoryToken(User, 'data'), useValue: userRepo },
-        { provide: getRepositoryToken(RefreshToken, 'data'), useValue: refreshRepo },
+        { provide: getRepositoryToken(Tenant), useValue: tenantRepo },
+        { provide: getRepositoryToken(User), useValue: userRepo },
+        { provide: getRepositoryToken(RefreshToken), useValue: refreshRepo },
         { provide: JwtService, useValue: jwtService },
       ],
     }).compile();
@@ -135,3 +135,4 @@ describe('JwtAuthService', () => {
     });
   });
 });
+

@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -29,7 +29,7 @@ export class BulkMessageService {
   private readonly processingBatches = new Map<string, boolean>(); // Track active batches for cancellation
 
   constructor(
-    @InjectRepository(MessageBatch, 'data')
+    @InjectRepository(MessageBatch)
     private readonly batchRepository: Repository<MessageBatch>,
     private readonly sessionService: SessionService,
   ) {}
@@ -297,3 +297,4 @@ export class BulkMessageService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
+

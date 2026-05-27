@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable, ConflictException, NotFoundException, ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,7 +14,7 @@ const BCRYPT_ROUNDS = 10;
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User, 'data')
+    @InjectRepository(User)
     private readonly repo: Repository<User>,
     private readonly ctx: TenantContext,
   ) {}
@@ -66,3 +66,4 @@ export class UsersService {
     await this.repo.remove(user);
   }
 }
+

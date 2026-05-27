@@ -38,13 +38,13 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
   private reconnectStates: Map<string, ReconnectState> = new Map();
 
   constructor(
-    @InjectRepository(Session, 'data')
+    @InjectRepository(Session)
     private readonly sessionRepository: Repository<Session>,
-    @InjectRepository(Message, 'data')
+    @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
-    @InjectRepository(Conversation, 'data')
+    @InjectRepository(Conversation)
     private readonly conversationRepository: Repository<Conversation>,
-    @InjectDataSource('data')
+    @InjectDataSource()
     private readonly dataSource: DataSource,
     private readonly engineFactory: EngineFactory,
     private readonly eventsGateway: EventsGateway,

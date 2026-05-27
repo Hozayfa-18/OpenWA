@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UsersService } from '../users/users.service';
 import { User, UserRole } from '../users/entities/user.entity';
@@ -24,7 +24,7 @@ const userInA: User = {
   updatedAt: new Date(),
 };
 
-describe('Tenant isolation — UsersService', () => {
+describe('Tenant isolation â€” UsersService', () => {
   let serviceA: UsersService;
   let serviceB: UsersService;
   let repo: jest.Mocked<{
@@ -51,7 +51,7 @@ describe('Tenant isolation — UsersService', () => {
       const m: TestingModule = await Test.createTestingModule({
         providers: [
           UsersService,
-          { provide: getRepositoryToken(User, 'data'), useValue: repo },
+          { provide: getRepositoryToken(User), useValue: repo },
           { provide: TenantContext, useValue: ctx },
         ],
       }).compile();
@@ -95,5 +95,6 @@ describe('Tenant isolation — UsersService', () => {
   });
 });
 
-// Suppress unused-variable warning — userInA documents the fixture intent
+// Suppress unused-variable warning â€” userInA documents the fixture intent
 void userInA;
+

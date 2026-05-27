@@ -102,19 +102,19 @@ describe('SessionService', () => {
       providers: [
         SessionService,
         {
-          provide: getRepositoryToken(Session, 'data'),
+          provide: getRepositoryToken(Session),
           useValue: repository,
         },
         {
-          provide: getRepositoryToken(Message, 'data'),
+          provide: getRepositoryToken(Message),
           useValue: messageRepository,
         },
         {
-          provide: getRepositoryToken(Conversation, 'data'),
+          provide: getRepositoryToken(Conversation),
           useValue: conversationRepository,
         },
         {
-          provide: getDataSourceToken('data'),
+          provide: getDataSourceToken(),
           useValue: dataSource,
         },
         { provide: EngineFactory, useValue: engineFactory },

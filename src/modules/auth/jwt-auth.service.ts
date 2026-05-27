@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable, ConflictException, UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -20,13 +20,13 @@ const ACCESS_TTL      = '15m';
 @Injectable()
 export class JwtAuthService {
   constructor(
-    @InjectRepository(Tenant, 'data')
+    @InjectRepository(Tenant)
     private readonly tenantRepo: Repository<Tenant>,
 
-    @InjectRepository(User, 'data')
+    @InjectRepository(User)
     private readonly userRepo: Repository<User>,
 
-    @InjectRepository(RefreshToken, 'data')
+    @InjectRepository(RefreshToken)
     private readonly refreshRepo: Repository<RefreshToken>,
 
     private readonly jwtService: JwtService,
@@ -120,3 +120,4 @@ export class JwtAuthService {
     return createHash('sha256').update(raw).digest('hex');
   }
 }
+

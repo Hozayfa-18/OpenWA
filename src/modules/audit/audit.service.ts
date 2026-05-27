@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThan } from 'typeorm';
 import { AuditLog, AuditAction, AuditSeverity } from './entities/audit-log.entity';
@@ -31,7 +31,7 @@ export interface AuditQueryOptions {
 @Injectable()
 export class AuditService {
   constructor(
-    @InjectRepository(AuditLog, 'main')
+    @InjectRepository(AuditLog)
     private readonly auditRepository: Repository<AuditLog>,
   ) {}
 
@@ -123,3 +123,4 @@ export class AuditService {
     return result.affected || 0;
   }
 }
+

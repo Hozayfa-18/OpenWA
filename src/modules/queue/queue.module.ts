@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
@@ -18,7 +18,7 @@ export { QUEUE_NAMES } from './queue-names';
 @Module({
   imports: [
     // Required for WebhookProcessor to inject Repository<Webhook>
-    TypeOrmModule.forFeature([Webhook, Conversation], 'data'),
+    TypeOrmModule.forFeature([Webhook, Conversation]),
     // Required for WebhookProcessor to inject HookManager
     HooksModule,
     BullModule.forRootAsync({
@@ -51,3 +51,4 @@ export { QUEUE_NAMES } from './queue-names';
   exports: [BullModule],
 })
 export class QueueModule {}
+

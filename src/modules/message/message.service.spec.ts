@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BadRequestException } from '@nestjs/common';
@@ -75,8 +75,8 @@ describe('MessageService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MessageService,
-        { provide: getRepositoryToken(Message, 'data'), useValue: repository },
-        { provide: getRepositoryToken(Conversation, 'data'), useValue: conversationRepository },
+        { provide: getRepositoryToken(Message), useValue: repository },
+        { provide: getRepositoryToken(Conversation), useValue: conversationRepository },
         { provide: SessionService, useValue: sessionService },
         { provide: HookManager, useValue: hookManager },
         { provide: EventsGateway, useValue: eventsGateway },
@@ -86,7 +86,7 @@ describe('MessageService', () => {
     service = module.get<MessageService>(MessageService);
   });
 
-  // ── sendText ──────────────────────────────────────────────────────
+  // â”€â”€ sendText â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('sendText', () => {
     it('should send text message and return messageId + timestamp', async () => {
@@ -155,7 +155,7 @@ describe('MessageService', () => {
     });
   });
 
-  // ── sendImage ─────────────────────────────────────────────────────
+  // â”€â”€ sendImage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('sendImage', () => {
     it('should send image via URL', async () => {
@@ -186,7 +186,7 @@ describe('MessageService', () => {
     });
   });
 
-  // ── sendVideo / sendAudio / sendDocument / sendSticker ────────────
+  // â”€â”€ sendVideo / sendAudio / sendDocument / sendSticker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('sendVideo', () => {
     it('should call engine.sendVideoMessage', async () => {
@@ -232,7 +232,7 @@ describe('MessageService', () => {
     });
   });
 
-  // ── sendLocation ──────────────────────────────────────────────────
+  // â”€â”€ sendLocation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('sendLocation', () => {
     it('should send location with lat/lng', async () => {
@@ -251,7 +251,7 @@ describe('MessageService', () => {
     });
   });
 
-  // ── sendContact ───────────────────────────────────────────────────
+  // â”€â”€ sendContact â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('sendContact', () => {
     it('should send contact with name and number', async () => {
@@ -269,7 +269,7 @@ describe('MessageService', () => {
     });
   });
 
-  // ── reply / forward ───────────────────────────────────────────────
+  // â”€â”€ reply / forward â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('reply', () => {
     it('should call engine.replyToMessage with quotedMessageId', async () => {
@@ -311,7 +311,7 @@ describe('MessageService', () => {
     });
   });
 
-  // ── saveIncomingMessage ───────────────────────────────────────────
+  // â”€â”€ saveIncomingMessage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('saveIncomingMessage', () => {
     it('should save with INCOMING direction', async () => {
@@ -331,7 +331,7 @@ describe('MessageService', () => {
     });
   });
 
-  // ── buildMediaInput (via sendImage) ───────────────────────────────
+  // â”€â”€ buildMediaInput (via sendImage) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('buildMediaInput validation', () => {
     it('should throw when neither url nor base64 is provided', async () => {
@@ -350,17 +350,17 @@ describe('MessageService', () => {
     });
   });
 
-  // ── reactToMessage / deleteMessage ────────────────────────────────
+  // â”€â”€ reactToMessage / deleteMessage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   describe('reactToMessage', () => {
     it('should call engine.reactToMessage', async () => {
       await service.reactToMessage('sess-1', {
         chatId: 'test@c.us',
         messageId: 'wa-msg-1',
-        emoji: '👍',
+        emoji: 'ðŸ‘',
       });
 
-      expect(mockEngine.reactToMessage).toHaveBeenCalledWith('test@c.us', 'wa-msg-1', '👍');
+      expect(mockEngine.reactToMessage).toHaveBeenCalledWith('test@c.us', 'wa-msg-1', 'ðŸ‘');
     });
   });
 
@@ -385,3 +385,4 @@ describe('MessageService', () => {
     });
   });
 });
+

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -38,7 +38,7 @@ export class WebhookService {
   private readonly queueEnabled: boolean;
 
   constructor(
-    @InjectRepository(Webhook, 'data')
+    @InjectRepository(Webhook)
     private readonly webhookRepository: Repository<Webhook>,
     private readonly configService: ConfigService,
     private readonly hookManager: HookManager,
@@ -363,3 +363,4 @@ export class WebhookService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
+

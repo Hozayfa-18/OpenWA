@@ -1,4 +1,4 @@
-import { Injectable, Scope } from '@nestjs/common';
+﻿import { Injectable, Scope } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { TenantContext } from '../../../common/tenant/tenant-context.service';
@@ -7,7 +7,7 @@ import { Conversation } from '../entities/conversation.entity';
 @Injectable({ scope: Scope.REQUEST })
 export class ConversationRepository {
   constructor(
-    @InjectRepository(Conversation, 'data')
+    @InjectRepository(Conversation)
     private readonly repo: Repository<Conversation>,
     private readonly ctx: TenantContext,
   ) {}
@@ -42,3 +42,4 @@ export class ConversationRepository {
     );
   }
 }
+
