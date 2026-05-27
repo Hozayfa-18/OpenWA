@@ -12,10 +12,15 @@ export enum SessionStatus {
   FAILED = 'failed',
 }
 
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+
 @Entity('sessions')
 export class Session {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'varchar', length: 36, default: DEFAULT_TENANT_ID })
+  tenantId: string;
 
   @Column({ type: 'varchar', length: 100, unique: true })
   name: string;

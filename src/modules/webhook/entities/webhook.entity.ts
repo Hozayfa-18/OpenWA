@@ -11,10 +11,15 @@ import { Session } from '../../session/entities/session.entity';
 import { DateTransformer } from '../../../common/transformers/date.transformer';
 import { jsonColumnType, dateColumnType } from '../../../common/utils/column-types';
 
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+
 @Entity('webhooks')
 export class Webhook {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'varchar', length: 36, default: DEFAULT_TENANT_ID })
+  tenantId: string;
 
   @Column({ type: 'uuid' })
   sessionId: string;
