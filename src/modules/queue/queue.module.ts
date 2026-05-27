@@ -6,8 +6,10 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WebhookProcessor } from './processors/webhook.processor';
+import { ConversationUpdateProcessor } from './processors/conversation-update.processor';
 import { QUEUE_NAMES } from './queue-names';
 import { Webhook } from '../webhook/entities/webhook.entity';
+import { Conversation } from '../conversations/entities/conversation.entity';
 import { HooksModule } from '../../core/hooks/hooks.module';
 
 // Re-export for backward compatibility
@@ -16,7 +18,7 @@ export { QUEUE_NAMES } from './queue-names';
 @Module({
   imports: [
     // Required for WebhookProcessor to inject Repository<Webhook>
-    TypeOrmModule.forFeature([Webhook], 'data'),
+    TypeOrmModule.forFeature([Webhook, Conversation], 'data'),
     // Required for WebhookProcessor to inject HookManager
     HooksModule,
     BullModule.forRootAsync({
@@ -31,6 +33,7 @@ export { QUEUE_NAMES } from './queue-names';
       }),
     }),
     BullModule.registerQueue({ name: QUEUE_NAMES.WEBHOOK }),
+    BullModule.registerQueue({ name: QUEUE_NAMES.CONVERSATION_UPDATE }),
     BullBoardModule.forRoot({
       route: '/admin/queues',
       adapter: ExpressAdapter,
@@ -39,8 +42,12 @@ export { QUEUE_NAMES } from './queue-names';
       name: QUEUE_NAMES.WEBHOOK,
       adapter: BullMQAdapter,
     }),
+    BullBoardModule.forFeature({
+      name: QUEUE_NAMES.CONVERSATION_UPDATE,
+      adapter: BullMQAdapter,
+    }),
   ],
-  providers: [WebhookProcessor],
+  providers: [WebhookProcessor, ConversationUpdateProcessor],
   exports: [BullModule],
 })
 export class QueueModule {}

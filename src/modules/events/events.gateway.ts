@@ -10,6 +10,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth/auth.service';
 import type {
   WSClientMessage,
@@ -23,6 +24,11 @@ import type {
 } from './dto/ws-messages.dto';
 import { SUBSCRIBABLE_EVENTS, buildRoomName } from './dto/ws-messages.dto';
 
+const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID || '00000000-0000-0000-0000-000000000001';
+
+const buildTenantRoomName = (tenantId: string, sessionId: string, event: string): string =>
+  `tenant:${tenantId}:${buildRoomName(sessionId, event)}`;
+
 @WebSocketGateway({
   cors: {
     origin: '*', // In production, restrict this
@@ -35,41 +41,60 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   private logger = new Logger('EventsGateway');
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   afterInit() {
     this.logger.log('WebSocket Gateway initialized');
   }
 
   async handleConnection(client: Socket) {
-    // Extract API key from header or query param
+    const authHeader = client.handshake.headers.authorization;
+    const jwtToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
     const apiKey = (client.handshake.headers['x-api-key'] as string) || (client.handshake.query.apiKey as string);
 
-    if (!apiKey) {
-      this.logger.warn(`Client ${client.id} rejected: No API key provided`);
-      client.emit('message', this.createError('UNAUTHORIZED', 'API key required'));
-      client.disconnect();
-      return;
-    }
+    let tenantId: string | null = null;
 
-    try {
-      const validKey = await this.authService.validateApiKey(apiKey);
-      if (!validKey) {
-        this.logger.warn(`Client ${client.id} rejected: Invalid API key`);
+    if (jwtToken) {
+      try {
+        const payload = this.jwtService.verify<{ tenantId: string; sub: string }>(jwtToken);
+        tenantId = payload.tenantId;
+        (client.data as Record<string, unknown>).userId = payload.sub;
+        (client.data as Record<string, unknown>).tenantId = tenantId;
+      } catch {
+        this.logger.warn(`Client ${client.id} rejected: invalid JWT`);
+        client.emit('message', this.createError('UNAUTHORIZED', 'Invalid token'));
+        client.disconnect();
+        return;
+      }
+    } else if (apiKey) {
+      try {
+        const validKey = await this.authService.validateApiKey(apiKey);
+        tenantId = validKey.tenantId ?? DEFAULT_TENANT_ID;
+
+        (client.data as Record<string, unknown>).apiKey = validKey;
+        (client.data as Record<string, unknown>).tenantId = tenantId;
+        this.logger.log(`Client connected: ${client.id} (key: ${validKey.name})`);
+      } catch (error) {
+        this.logger.warn(`Client ${client.id} rejected: Auth error`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
         client.emit('message', this.createError('UNAUTHORIZED', 'Invalid API key'));
         client.disconnect();
         return;
       }
-
-      // Store API key info on socket for later use
-      (client.data as { apiKey: unknown }).apiKey = validKey;
-      this.logger.log(`Client connected: ${client.id} (key: ${validKey.name})`);
-    } catch (error) {
-      this.logger.warn(`Client ${client.id} rejected: Auth error`, {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      client.emit('message', this.createError('UNAUTHORIZED', 'Authentication failed'));
+    } else {
+      this.logger.warn(`Client ${client.id} rejected: No credentials`);
+      client.emit('message', this.createError('UNAUTHORIZED', 'API key or JWT required'));
       client.disconnect();
+      return;
+    }
+
+    if (tenantId) {
+      void client.join(`tenant:${tenantId}`);
+      this.logger.debug(`Client ${client.id} joined tenant room: ${tenantId}`);
     }
   }
 
@@ -120,10 +145,15 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       );
     }
 
-    // Join rooms for each session/event combination
+    const tenantId = (client.data as { tenantId?: string }).tenantId;
+    if (!tenantId) {
+      return this.createError('UNAUTHORIZED', 'Tenant context is required', requestId);
+    }
+
+    // Join tenant-scoped rooms for each session/event combination.
     const rooms: string[] = [];
     for (const event of validEvents) {
-      const room = buildRoomName(sessionId, event);
+      const room = buildTenantRoomName(tenantId, sessionId, event);
       void client.join(room);
       rooms.push(room);
     }
@@ -144,10 +174,12 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
     // Leave all rooms for this session
     const clientRooms = Array.from(client.rooms);
-    const sessionPrefix = `session:${sessionId}:`;
+    const tenantId = (client.data as { tenantId?: string }).tenantId;
+    const sessionPrefix = tenantId ? `tenant:${tenantId}:session:${sessionId}:` : `session:${sessionId}:`;
+    const wildcardPrefix = tenantId ? `tenant:${tenantId}:session:` : 'session:';
 
     for (const room of clientRooms) {
-      if (room.startsWith(sessionPrefix) || (sessionId === '*' && room.startsWith('session:'))) {
+      if (room.startsWith(sessionPrefix) || (sessionId === '*' && room.startsWith(wildcardPrefix))) {
         void client.leave(room);
       }
     }
@@ -185,12 +217,20 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   /**
    * Emit event to specific rooms based on sessionId and event type
    */
-  private emitToRooms(sessionId: string, event: string, data: unknown): void {
+  private emitToRooms(sessionId: string, event: string, data: unknown, tenantId?: string): void {
     const eventMessage: WSEventMessage = {
       type: 'event',
       payload: { event, sessionId, data },
       timestamp: new Date().toISOString(),
     };
+
+    if (tenantId) {
+      this.server.to(buildTenantRoomName(tenantId, sessionId, event)).emit('message', eventMessage);
+      this.server.to(buildTenantRoomName(tenantId, sessionId, '*')).emit('message', eventMessage);
+      this.server.to(buildTenantRoomName(tenantId, '*', event)).emit('message', eventMessage);
+      this.server.to(buildTenantRoomName(tenantId, '*', '*')).emit('message', eventMessage);
+      return;
+    }
 
     // Emit to specific session + event room
     this.server.to(buildRoomName(sessionId, event)).emit('message', eventMessage);
@@ -204,36 +244,36 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   /**
    * Emit session status change
    */
-  emitSessionStatus(sessionId: string, status: string, data?: Record<string, unknown>) {
-    this.emitToRooms(sessionId, 'session.status', { status, ...data });
+  emitSessionStatus(sessionId: string, status: string, data?: Record<string, unknown>, tenantId?: string) {
+    this.emitToRooms(sessionId, 'session.status', { status, ...data }, tenantId);
   }
 
   /**
    * Emit QR code update for a session
    */
-  emitQRCode(sessionId: string, qrCode: string) {
-    this.emitToRooms(sessionId, 'session.qr', { qrCode });
+  emitQRCode(sessionId: string, qrCode: string, tenantId?: string) {
+    this.emitToRooms(sessionId, 'session.qr', { qrCode }, tenantId);
   }
 
   /**
    * Emit new message notification
    */
-  emitMessage(sessionId: string, message: Record<string, unknown>) {
-    this.emitToRooms(sessionId, 'message.received', message);
+  emitMessage(sessionId: string, message: Record<string, unknown>, tenantId?: string) {
+    this.emitToRooms(sessionId, 'message.received', message, tenantId);
   }
 
   /**
    * Emit message sent notification
    */
-  emitMessageSent(sessionId: string, message: Record<string, unknown>) {
-    this.emitToRooms(sessionId, 'message.sent', message);
+  emitMessageSent(sessionId: string, message: Record<string, unknown>, tenantId?: string) {
+    this.emitToRooms(sessionId, 'message.sent', message, tenantId);
   }
 
   /**
    * Emit message acknowledgment
    */
-  emitMessageAck(sessionId: string, data: { messageId: string; ack: number; ackName: string }) {
-    this.emitToRooms(sessionId, 'message.ack', data);
+  emitMessageAck(sessionId: string, data: { messageId: string; ack: number; ackName: string }, tenantId?: string) {
+    this.emitToRooms(sessionId, 'message.ack', data, tenantId);
   }
 
   /**
@@ -247,5 +287,21 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       error,
       timestamp: new Date().toISOString(),
     });
+  }
+
+  emitConversationNew(tenantId: string, data: unknown): void {
+    this.server.to(`tenant:${tenantId}`).emit('conversation.new', data);
+  }
+
+  emitConversationUpdated(tenantId: string, data: unknown): void {
+    this.server.to(`tenant:${tenantId}`).emit('conversation.updated', data);
+  }
+
+  emitConversationAssigned(tenantId: string, data: unknown): void {
+    this.server.to(`tenant:${tenantId}`).emit('conversation.assigned', data);
+  }
+
+  emitTenantMessage(tenantId: string, data: unknown): void {
+    this.server.to(`tenant:${tenantId}`).emit('message.received', data);
   }
 }

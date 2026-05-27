@@ -1,7 +1,5 @@
 // src/modules/auth/entities/api-key.entity.ts
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
-import { DateTransformer } from '../../../common/transformers/date.transformer';
-import { dateColumnType } from '../../../common/utils/column-types';
 
 export enum ApiKeyRole {
   ADMIN    = 'admin',
@@ -36,10 +34,10 @@ export class ApiKey {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ type: dateColumnType(), nullable: true, transformer: DateTransformer })
+  @Column({ type: 'datetime', nullable: true })
   expiresAt: Date | null;
 
-  @Column({ type: dateColumnType(), nullable: true, transformer: DateTransformer })
+  @Column({ type: 'datetime', nullable: true })
   lastUsedAt: Date | null;
 
   @Column({ type: 'int', default: 0 })

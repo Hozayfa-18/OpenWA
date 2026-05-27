@@ -74,6 +74,32 @@ export interface MessageResponse {
   timestamp: number;
 }
 
+export interface Conversation {
+  tenantId: string;
+  sessionId: string;
+  chatId: string;
+  contactId: string | null;
+  assignedUserId: string | null;
+  lastMessageId: string;
+  lastMessageAt: string;
+  unreadCount: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  waMessageId: string | null;
+  chatId: string;
+  from: string;
+  to: string;
+  body: string | null;
+  type: string;
+  direction: 'incoming' | 'outgoing';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  timestamp: number | null;
+  createdAt: string;
+}
+
 export interface HealthStatus {
   status: 'ok' | 'error';
   timestamp?: string;
@@ -289,6 +315,25 @@ export const messageApi = {
     request<MessageResponse>(`/sessions/${sessionId}/messages/send-document`, {
       method: 'POST',
       body: JSON.stringify({ chatId, url, filename }),
+    }),
+};
+
+// =============================================================================
+// Conversation API
+// =============================================================================
+
+export const conversationApi = {
+  list: () => request<Conversation[]>('/v1/conversations'),
+  messages: (sessionId: string, chatId: string) =>
+    request<ChatMessage[]>(`/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/messages`),
+  assign: (sessionId: string, chatId: string, userId: string) =>
+    request<void>(`/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/assign`, {
+      method: 'PATCH',
+      body: JSON.stringify({ userId }),
+    }),
+  markRead: (sessionId: string, chatId: string) =>
+    request<void>(`/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/read`, {
+      method: 'PATCH',
     }),
 };
 

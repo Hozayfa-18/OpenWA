@@ -6,6 +6,8 @@ import { MessageService } from './message.service';
 import { Message, MessageDirection, MessageStatus } from './entities/message.entity';
 import { SessionService } from '../session/session.service';
 import { HookManager } from '../../core/hooks';
+import { Conversation } from '../conversations/entities/conversation.entity';
+import { EventsGateway } from '../events/events.gateway';
 
 const mockEngineResult = { id: 'wa-msg-1', timestamp: 1706868000 };
 
@@ -30,8 +32,10 @@ function createMockEngine() {
 describe('MessageService', () => {
   let service: MessageService;
   let repository: jest.Mocked<Partial<Repository<Message>>>;
+  let conversationRepository: jest.Mocked<Partial<Repository<Conversation>>>;
   let sessionService: jest.Mocked<Partial<SessionService>>;
   let hookManager: jest.Mocked<Partial<HookManager>>;
+  let eventsGateway: jest.Mocked<Partial<EventsGateway>>;
   let mockEngine: ReturnType<typeof createMockEngine>;
 
   beforeEach(async () => {
@@ -40,12 +44,20 @@ describe('MessageService', () => {
       save: jest.fn().mockImplementation(msg => Promise.resolve(msg)),
       createQueryBuilder: jest.fn(),
     };
+    conversationRepository = {
+      insert: jest.fn().mockResolvedValue(undefined),
+      createQueryBuilder: jest.fn(),
+    };
 
     mockEngine = createMockEngine();
 
     sessionService = {
       getEngine: jest.fn().mockReturnValue(mockEngine),
-      findOne: jest.fn().mockResolvedValue({ id: 'sess-1', phone: '628123456789' }),
+      findOne: jest.fn().mockResolvedValue({
+        id: 'sess-1',
+        tenantId: '00000000-0000-0000-0000-000000000001',
+        phone: '628123456789',
+      }),
     };
 
     hookManager = {
@@ -55,12 +67,19 @@ describe('MessageService', () => {
       }),
     };
 
+    eventsGateway = {
+      emitConversationNew: jest.fn(),
+      emitConversationUpdated: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MessageService,
         { provide: getRepositoryToken(Message, 'data'), useValue: repository },
+        { provide: getRepositoryToken(Conversation, 'data'), useValue: conversationRepository },
         { provide: SessionService, useValue: sessionService },
         { provide: HookManager, useValue: hookManager },
+        { provide: EventsGateway, useValue: eventsGateway },
       ],
     }).compile();
 
