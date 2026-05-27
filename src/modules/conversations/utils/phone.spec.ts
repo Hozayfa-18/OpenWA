@@ -5,8 +5,8 @@ describe('extractPhoneNumber', () => {
     expect(extractPhoneNumber('201234567890@c.us')).toBe('201234567890');
   });
 
-  it('extracts number from @lid chatId', () => {
-    expect(extractPhoneNumber('20255233581184@lid')).toBe('20255233581184');
+  it('returns null for @lid chatId', () => {
+    expect(extractPhoneNumber('20255233581184@lid')).toBeNull();
   });
 
   it('returns null for group @g.us chatId', () => {
