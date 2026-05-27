@@ -19,6 +19,12 @@ export class Conversation {
   @Column({ nullable: true, type: 'varchar' })
   assignedUserId: string | null;
 
+  @Column({ nullable: true, type: 'varchar' })
+  phoneNumber: string | null;
+
+  @Column({ nullable: true, type: 'varchar' })
+  contactName: string | null;
+
   @Column({ type: 'varchar' })
   lastMessageId: string;
 
