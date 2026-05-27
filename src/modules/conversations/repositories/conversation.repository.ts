@@ -41,4 +41,17 @@ export class ConversationRepository {
       updates,
     );
   }
+
+  async linkContact(
+    sessionId: string,
+    chatId: string,
+    contactId: string,
+    contactName: string,
+    phoneNumber: string | null,
+  ): Promise<void> {
+    await this.repo.update(
+      { tenantId: this.tenantId, sessionId, chatId } as FindOptionsWhere<Conversation>,
+      { contactId, contactName, phoneNumber },
+    );
+  }
 }

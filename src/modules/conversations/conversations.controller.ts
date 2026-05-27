@@ -6,6 +6,7 @@ import { RequireRole } from '../auth/decorators/auth.decorators';
 import { ApiKeyRole } from '../auth/entities/api-key.entity';
 import { Message } from '../message/entities/message.entity';
 import { AssignConversationDto } from './dto/assign-conversation.dto';
+import { LinkContactDto } from './dto/link-contact.dto';
 import { ListConversationsDto } from './dto/list-conversations.dto';
 import { ConversationsService } from './services/conversations.service';
 
@@ -41,6 +42,17 @@ export class ConversationsController {
     @Body() dto: AssignConversationDto,
   ): Promise<void> {
     await this.conversationsService.assign(sessionId, chatId, dto);
+  }
+
+  @Patch(':sessionId/:chatId/contact')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireRole(ApiKeyRole.OPERATOR)
+  async linkContact(
+    @Param('sessionId') sessionId: string,
+    @Param('chatId') chatId: string,
+    @Body() dto: LinkContactDto,
+  ): Promise<void> {
+    await this.conversationsService.linkContact(sessionId, chatId, dto);
   }
 
   @Patch(':sessionId/:chatId/read')
