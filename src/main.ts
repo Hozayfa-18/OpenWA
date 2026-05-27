@@ -43,9 +43,15 @@ if (fs.existsSync(generatedEnvPath)) {
 # Edit via Dashboard > Infrastructure or modify this file directly.
 # Note: values in process env or project .env take precedence over this file.
 
-# Database (SQLite - no external service required)
-DATABASE_TYPE=sqlite
-POSTGRES_BUILTIN=false
+# Database (PostgreSQL - set your connection details)
+DATABASE_TYPE=postgres
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=postgres
+DATABASE_USERNAME=postgres
+DATABASE_PASSWORD=
+DATABASE_SYNCHRONIZE=false
+DATABASE_SSL=true
 
 # Redis & Queue (disabled by default)
 REDIS_ENABLED=false
