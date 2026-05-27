@@ -77,6 +77,11 @@ export default () => ({
     },
   },
 
+  // Auth configuration
+  auth: {
+    jwtSecret: process.env.JWT_SECRET || 'change-me-in-production',
+  },
+
   // Storage configuration
   storage: {
     type: process.env.STORAGE_TYPE || 'local',

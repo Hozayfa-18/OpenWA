@@ -26,6 +26,10 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { HooksModule } from './core/hooks';
 import { PluginsModule } from './core/plugins';
 import { PluginsApiModule } from './modules/plugins/plugins.module';
+import { TenantModule } from './common/tenant/tenant.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
+import { UsersModule } from './modules/users/users.module';
+import { CrmModule } from './modules/crm/crm.module';
 
 // Only import QueueModule if explicitly enabled to avoid Redis connection errors
 const queueModules: Array<Type | DynamicModule> = [];
@@ -71,6 +75,10 @@ if (process.env.QUEUE_ENABLED === 'true') {
             __dirname + '/modules/session/**/*.entity{.ts,.js}',
             __dirname + '/modules/webhook/**/*.entity{.ts,.js}',
             __dirname + '/modules/message/**/*.entity{.ts,.js}',
+            __dirname + '/modules/tenants/**/*.entity{.ts,.js}',
+            __dirname + '/modules/users/**/*.entity{.ts,.js}',
+            __dirname + '/modules/auth/entities/refresh-token.entity{.ts,.js}',
+            __dirname + '/modules/crm/**/*.entity{.ts,.js}',
           ],
           migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
           logging: configService.get<boolean>('dataDatabase.logging', false),
@@ -84,7 +92,7 @@ if (process.env.QUEUE_ENABLED === 'true') {
             port: configService.get<number>('dataDatabase.port'),
             username: configService.get<string>('dataDatabase.username'),
             password: configService.get<string>('dataDatabase.password'),
-            database: 'openwa',
+            database: configService.get<string>('dataDatabase.database', 'openwa'),
             // Never auto-sync Postgres in production; rely on migrations.
             synchronize: configService.get<boolean>('dataDatabase.synchronize', false),
             migrationsRun: true,
@@ -144,6 +152,10 @@ if (process.env.QUEUE_ENABLED === 'true') {
     EventsModule, // WebSocket real-time events
     ...queueModules,
     AuthModule,
+    TenantModule,   // global, exports TenantContext
+    TenantsModule,
+    UsersModule,
+    CrmModule,
     EngineModule,
     SessionModule,
     MessageModule,

@@ -151,6 +151,43 @@ export class AuthService implements OnModuleInit {
     });
   }
 
+  async findAllForTenant(tenantId: string): Promise<ApiKey[]> {
+    return this.apiKeyRepository.find({
+      where: { tenantId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async createApiKeyForTenant(
+    tenantId: string,
+    dto: CreateApiKeyDto,
+  ): Promise<{ apiKey: ApiKey; rawKey: string }> {
+    const rawKey    = `owa_k1_${randomBytes(32).toString('hex')}`;
+    const keyHash   = this.hashKey(rawKey);
+    const keyPrefix = rawKey.substring(0, 12);
+
+    const apiKey = this.apiKeyRepository.create({
+      name: dto.name,
+      keyHash,
+      keyPrefix,
+      role: dto.role || ApiKeyRole.OPERATOR,
+      allowedIps: dto.allowedIps || null,
+      allowedSessions: dto.allowedSessions || null,
+      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+      tenantId,
+      scopes: null,
+    });
+
+    const saved = await this.apiKeyRepository.save(apiKey);
+    return { apiKey: saved, rawKey };
+  }
+
+  async deleteForTenant(tenantId: string, id: string): Promise<void> {
+    const key = await this.apiKeyRepository.findOne({ where: { id, tenantId } });
+    if (!key) throw new NotFoundException(`API key '${id}' not found`);
+    await this.apiKeyRepository.remove(key);
+  }
+
   async revoke(id: string): Promise<ApiKey> {
     const apiKey = await this.findOne(id);
     apiKey.isActive = false;
