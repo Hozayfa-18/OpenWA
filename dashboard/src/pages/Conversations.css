@@ -154,6 +154,69 @@
   font-size: 0.8rem;
 }
 
+.thread-subtitle {
+  color: var(--text-muted) !important;
+  font-size: 0.75rem !important;
+}
+
+.reply-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-white);
+}
+
+.reply-input {
+  flex: 1;
+  min-height: 40px;
+  max-height: 120px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-light);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  resize: none;
+  overflow-y: auto;
+  field-sizing: content;
+  font-family: inherit;
+}
+
+.reply-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.reply-input:disabled {
+  opacity: 0.6;
+}
+
+.send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+}
+
+.send-btn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.send-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;

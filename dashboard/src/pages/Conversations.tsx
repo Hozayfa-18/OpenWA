@@ -1,18 +1,22 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCheck, Loader2, MessageSquare, UserCheck } from 'lucide-react';
+import { CheckCheck, Loader2, MessageSquare, Send, UserCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../components/PageHeader';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useConversationSocket } from '../hooks/useConversationSocket';
-import { conversationApi, type ChatMessage, type Conversation } from '../services/api';
+import { conversationApi, messageApi, type ChatMessage, type Conversation } from '../services/api';
 import './Conversations.css';
+
+const formatChatId = (chatId: string): string => chatId.replace(/@.*$/, '');
 
 export function Conversations() {
   const { t } = useTranslation();
   useDocumentTitle(t('conversations.title'));
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<{ sessionId: string; chatId: string } | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const replyInputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations'],
@@ -48,6 +52,26 @@ export function Conversations() {
     mutationFn: (conversation: Conversation) => conversationApi.markRead(conversation.sessionId, conversation.chatId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['conversations'] }),
   });
+
+  const sendReplyMutation = useMutation({
+    mutationFn: ({ sessionId, chatId, text }: { sessionId: string; chatId: string; text: string }) =>
+      messageApi.sendText(sessionId, chatId, text),
+    onSuccess: () => {
+      setReplyText('');
+      if (selected) {
+        void queryClient.invalidateQueries({
+          queryKey: ['conversation-messages', selected.sessionId, selected.chatId],
+        });
+      }
+      replyInputRef.current?.focus();
+    },
+  });
+
+  const handleSendReply = useCallback(() => {
+    const text = replyText.trim();
+    if (!text || !selected || sendReplyMutation.isPending) return;
+    sendReplyMutation.mutate({ sessionId: selected.sessionId, chatId: selected.chatId, text });
+  }, [replyText, selected, sendReplyMutation]);
 
   const orderedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
@@ -89,7 +113,8 @@ export function Conversations() {
             <>
               <header className="thread-header">
                 <div className="thread-title">
-                  <strong>{selectedConversation.chatId}</strong>
+                  <strong>{formatChatId(selectedConversation.chatId)}</strong>
+                  <span className="thread-subtitle">{selectedConversation.sessionId}</span>
                   {selectedConversation.assignedUserId && (
                     <span>
                       <UserCheck size={14} />
@@ -122,6 +147,33 @@ export function Conversations() {
                   <MessageBubble key={message.id} message={message} />
                 ))}
               </div>
+
+              <div className="reply-bar">
+                <textarea
+                  ref={replyInputRef}
+                  className="reply-input"
+                  placeholder={t('conversations.replyPlaceholder', 'Type a message…')}
+                  value={replyText}
+                  rows={1}
+                  onChange={e => setReplyText(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendReply();
+                    }
+                  }}
+                  disabled={sendReplyMutation.isPending}
+                />
+                <button
+                  className="send-btn"
+                  type="button"
+                  onClick={handleSendReply}
+                  disabled={!replyText.trim() || sendReplyMutation.isPending}
+                  aria-label="Send"
+                >
+                  {sendReplyMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                </button>
+              </div>
             </>
           ) : (
             <div className="thread-placeholder">
@@ -152,7 +204,7 @@ function ConversationRow({
   return (
     <button className={`conversation-row ${isSelected ? 'selected' : ''}`} type="button" onClick={onSelect}>
       <span className="conversation-main">
-        <span className="conversation-chat-id">{conversation.chatId}</span>
+        <span className="conversation-chat-id">{formatChatId(conversation.chatId)}</span>
         {conversation.assignedUserId && (
           <span className="conversation-assignee">
             <UserCheck size={12} />
