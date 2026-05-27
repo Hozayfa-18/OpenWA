@@ -1,6 +1,4 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { DateTransformer } from '../../../common/transformers/date.transformer';
-import { jsonColumnType, dateColumnType } from '../../../common/utils/column-types';
 
 export enum SessionStatus {
   CREATED = 'created',
@@ -25,11 +23,7 @@ export class Session {
   @Column({ type: 'varchar', length: 100, unique: true })
   name: string;
 
-  @Column({
-    type: 'varchar',
-    length: 50,
-    default: SessionStatus.CREATED,
-  })
+  @Column({ type: 'varchar', length: 50, default: SessionStatus.CREATED })
   status: SessionStatus;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
@@ -38,20 +32,19 @@ export class Session {
   @Column({ type: 'varchar', length: 100, nullable: true })
   pushName: string | null;
 
-  @Column({ type: jsonColumnType(), default: '{}' })
+  @Column({ type: 'jsonb', default: '{}' })
   config: Record<string, unknown>;
 
-  // Phase 3: Proxy per session
   @Column({ type: 'varchar', length: 255, nullable: true })
   proxyUrl: string | null;
 
   @Column({ type: 'varchar', length: 10, nullable: true })
   proxyType: 'http' | 'https' | 'socks4' | 'socks5' | null;
 
-  @Column({ type: dateColumnType(), nullable: true, transformer: DateTransformer })
+  @Column({ type: 'timestamp', nullable: true })
   connectedAt: Date | null;
 
-  @Column({ type: dateColumnType(), nullable: true, transformer: DateTransformer })
+  @Column({ type: 'timestamp', nullable: true })
   lastActiveAt: Date | null;
 
   @CreateDateColumn()

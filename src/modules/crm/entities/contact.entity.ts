@@ -6,7 +6,6 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { jsonColumnType } from '../../../common/utils/column-types';
 
 export type ContactChatType = 'whatsapp' | 'telegram' | 'instagram' | 'viber' | 'vk' | 'avito';
 
@@ -31,7 +30,7 @@ export class Contact {
   @Column({ type: 'varchar', length: 36, nullable: true })
   responsibleUserId: string | null;
 
-  @Column({ type: jsonColumnType(), default: '[]' })
+  @Column({ type: 'jsonb', default: '[]' })
   contactData: ContactDataEntry[];
 
   @Column({ type: 'varchar', length: 2048, nullable: true })

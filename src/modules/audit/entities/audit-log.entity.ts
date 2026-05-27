@@ -1,14 +1,11 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index } from 'typeorm';
 
 export enum AuditAction {
-  // API Key events
   API_KEY_CREATED = 'api_key_created',
   API_KEY_USED = 'api_key_used',
   API_KEY_REVOKED = 'api_key_revoked',
   API_KEY_DELETED = 'api_key_deleted',
   API_KEY_AUTH_FAILED = 'api_key_auth_failed',
-
-  // Session events
   SESSION_CREATED = 'session_created',
   SESSION_STARTED = 'session_started',
   SESSION_STOPPED = 'session_stopped',
@@ -16,12 +13,8 @@ export enum AuditAction {
   SESSION_QR_GENERATED = 'session_qr_generated',
   SESSION_CONNECTED = 'session_connected',
   SESSION_DISCONNECTED = 'session_disconnected',
-
-  // Message events
   MESSAGE_SENT = 'message_sent',
   MESSAGE_FAILED = 'message_failed',
-
-  // Webhook events
   WEBHOOK_CREATED = 'webhook_created',
   WEBHOOK_DELETED = 'webhook_deleted',
   WEBHOOK_TRIGGERED = 'webhook_triggered',
@@ -80,9 +73,7 @@ export class AuditLog {
   @Column({ type: 'int', nullable: true })
   statusCode: number | null;
 
-  // The "main" database connection is always SQLite (boot config),
-  // so we use simple-json regardless of the user's data DB choice.
-  @Column({ type: 'simple-json', nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, unknown> | null;
 
   @Column({ type: 'text', nullable: true })

@@ -1,6 +1,4 @@
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
-import { DateTransformer } from '../../../common/transformers/date.transformer';
-import { dateColumnType } from '../../../common/utils/column-types';
 
 @Entity('conversations')
 @Index(['tenantId', 'lastMessageAt'])
@@ -24,7 +22,7 @@ export class Conversation {
   @Column({ type: 'varchar' })
   lastMessageId: string;
 
-  @Column({ type: dateColumnType(), transformer: DateTransformer })
+  @Column({ type: 'timestamp' })
   lastMessageAt: Date;
 
   @Column({ default: 0 })

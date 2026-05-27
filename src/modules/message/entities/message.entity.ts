@@ -1,5 +1,4 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
-import { jsonColumnType } from '../../../common/utils/column-types';
 
 export enum MessageDirection {
   INCOMING = 'incoming',
@@ -48,22 +47,16 @@ export class Message {
   @Column({ default: 'text' })
   type: string;
 
-  @Column({
-    type: 'varchar',
-    default: MessageDirection.OUTGOING,
-  })
+  @Column({ type: 'varchar', default: MessageDirection.OUTGOING })
   direction: MessageDirection;
 
   @Column({ type: 'bigint', nullable: true })
   timestamp: number;
 
-  @Column({ type: jsonColumnType(), nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, unknown>;
 
-  @Column({
-    type: 'varchar',
-    default: MessageStatus.SENT,
-  })
+  @Column({ type: 'varchar', default: MessageStatus.SENT })
   @Index()
   status: MessageStatus;
 

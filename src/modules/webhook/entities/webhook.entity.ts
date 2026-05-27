@@ -8,8 +8,6 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Session } from '../../session/entities/session.entity';
-import { DateTransformer } from '../../../common/transformers/date.transformer';
-import { jsonColumnType, dateColumnType } from '../../../common/utils/column-types';
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -31,13 +29,13 @@ export class Webhook {
   @Column({ type: 'varchar', length: 2048 })
   url: string;
 
-  @Column({ type: jsonColumnType(), default: '["message.received"]' })
+  @Column({ type: 'jsonb', default: '["message.received"]' })
   events: string[];
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   secret: string | null;
 
-  @Column({ type: jsonColumnType(), default: '{}' })
+  @Column({ type: 'jsonb', default: '{}' })
   headers: Record<string, string>;
 
   @Column({ type: 'boolean', default: true })
@@ -46,7 +44,7 @@ export class Webhook {
   @Column({ type: 'int', default: 3 })
   retryCount: number;
 
-  @Column({ type: dateColumnType(), nullable: true, transformer: DateTransformer })
+  @Column({ type: 'timestamp', nullable: true })
   lastTriggeredAt: Date | null;
 
   @CreateDateColumn()

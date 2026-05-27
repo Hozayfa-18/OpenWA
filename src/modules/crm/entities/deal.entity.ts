@@ -6,7 +6,6 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { jsonColumnType } from '../../../common/utils/column-types';
 
 @Entity('crm_deals')
 export class Deal {
@@ -23,7 +22,7 @@ export class Deal {
   @Column({ type: 'varchar', length: 36, nullable: true })
   responsibleUserId: string | null;
 
-  @Column({ type: jsonColumnType(), default: '[]' })
+  @Column({ type: 'jsonb', default: '[]' })
   contactIds: string[];
 
   @Column({ type: 'boolean', default: false })

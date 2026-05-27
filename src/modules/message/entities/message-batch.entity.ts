@@ -1,6 +1,4 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { DateTransformer } from '../../../common/transformers/date.transformer';
-import { jsonColumnType, dateColumnType } from '../../../common/utils/column-types';
 
 export enum BatchStatus {
   PENDING = 'pending',
@@ -21,10 +19,7 @@ export interface BatchMessageResult {
   chatId: string;
   status: BatchMessageStatus;
   messageId?: string;
-  error?: {
-    code: string;
-    message: string;
-  };
+  error?: { code: string; message: string };
   sentAt?: Date;
 }
 
@@ -55,7 +50,7 @@ export class MessageBatch {
   @Column({ type: 'varchar', default: BatchStatus.PENDING })
   status: BatchStatus;
 
-  @Column({ type: jsonColumnType() })
+  @Column({ type: 'jsonb' })
   messages: Array<{
     chatId: string;
     type: string;
@@ -63,17 +58,17 @@ export class MessageBatch {
     variables?: Record<string, string>;
   }>;
 
-  @Column({ type: jsonColumnType(), nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   options: {
     delayBetweenMessages: number;
     randomizeDelay: boolean;
     stopOnError: boolean;
   };
 
-  @Column({ type: jsonColumnType(), nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   progress: BatchProgress;
 
-  @Column({ type: jsonColumnType(), nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   results: BatchMessageResult[];
 
   @Column({ name: 'current_index', default: 0 })
@@ -85,9 +80,9 @@ export class MessageBatch {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @Column({ name: 'started_at', type: dateColumnType(), nullable: true, transformer: DateTransformer })
+  @Column({ name: 'started_at', type: 'timestamp', nullable: true })
   startedAt: Date | null;
 
-  @Column({ name: 'completed_at', type: dateColumnType(), nullable: true, transformer: DateTransformer })
+  @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
   completedAt: Date | null;
 }
