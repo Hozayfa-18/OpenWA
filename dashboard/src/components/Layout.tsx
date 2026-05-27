@@ -16,6 +16,7 @@ import {
   Monitor,
   Menu,
   X,
+  MessageSquare,
   ChevronLeft,
   ChevronRight,
   Languages,
@@ -33,6 +34,7 @@ interface LayoutProps {
 const allNavItems = [
   { to: '/', icon: LayoutDashboard, key: 'dashboard' as const, adminOnly: false },
   { to: '/sessions', icon: Smartphone, key: 'sessions' as const, adminOnly: false },
+  { to: '/conversations', icon: MessageSquare, key: 'conversations' as const, adminOnly: false },
   { to: '/webhooks', icon: Webhook, key: 'webhooks' as const, adminOnly: false },
   { to: '/api-keys', icon: Key, key: 'apiKeys' as const, adminOnly: true },
   { to: '/message-tester', icon: Send, key: 'messageTester' as const, adminOnly: false },

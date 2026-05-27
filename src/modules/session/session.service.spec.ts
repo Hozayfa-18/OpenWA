@@ -8,10 +8,13 @@ import { EngineFactory } from '../../engine/engine.factory';
 import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
 import { HookManager } from '../../core/hooks';
+import { Message } from '../message/entities/message.entity';
+import { Conversation } from '../conversations/entities/conversation.entity';
 
 function createMockSession(overrides: Partial<Session> = {}): Session {
   return {
     id: 'sess-uuid-1',
+    tenantId: '00000000-0000-0000-0000-000000000001',
     name: 'test-session',
     status: SessionStatus.CREATED,
     phone: null,
@@ -30,6 +33,8 @@ function createMockSession(overrides: Partial<Session> = {}): Session {
 describe('SessionService', () => {
   let service: SessionService;
   let repository: jest.Mocked<Partial<Repository<Session>>>;
+  let messageRepository: jest.Mocked<Partial<Repository<Message>>>;
+  let conversationRepository: jest.Mocked<Partial<Repository<Conversation>>>;
   let dataSource: jest.Mocked<Partial<DataSource>>;
   let engineFactory: jest.Mocked<Partial<EngineFactory>>;
   let eventsGateway: jest.Mocked<Partial<EventsGateway>>;
@@ -46,6 +51,16 @@ describe('SessionService', () => {
       save: jest.fn(),
       remove: jest.fn(),
       update: jest.fn(),
+    };
+
+    messageRepository = {
+      create: jest.fn(),
+      save: jest.fn(),
+    };
+
+    conversationRepository = {
+      insert: jest.fn(),
+      createQueryBuilder: jest.fn(),
     };
 
     dataSource = {
@@ -89,6 +104,14 @@ describe('SessionService', () => {
         {
           provide: getRepositoryToken(Session, 'data'),
           useValue: repository,
+        },
+        {
+          provide: getRepositoryToken(Message, 'data'),
+          useValue: messageRepository,
+        },
+        {
+          provide: getRepositoryToken(Conversation, 'data'),
+          useValue: conversationRepository,
         },
         {
           provide: getDataSourceToken('data'),

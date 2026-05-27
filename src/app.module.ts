@@ -30,6 +30,7 @@ import { TenantModule } from './common/tenant/tenant.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { UsersModule } from './modules/users/users.module';
 import { CrmModule } from './modules/crm/crm.module';
+import { ConversationsModule } from './modules/conversations/conversations.module';
 
 // Only import QueueModule if explicitly enabled to avoid Redis connection errors
 const queueModules: Array<Type | DynamicModule> = [];
@@ -79,6 +80,7 @@ if (process.env.QUEUE_ENABLED === 'true') {
             __dirname + '/modules/users/**/*.entity{.ts,.js}',
             __dirname + '/modules/auth/entities/refresh-token.entity{.ts,.js}',
             __dirname + '/modules/crm/**/*.entity{.ts,.js}',
+            __dirname + '/modules/conversations/**/*.entity{.ts,.js}',
           ],
           migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
           logging: configService.get<boolean>('dataDatabase.logging', false),
@@ -156,6 +158,7 @@ if (process.env.QUEUE_ENABLED === 'true') {
     TenantsModule,
     UsersModule,
     CrmModule,
+    ConversationsModule,
     EngineModule,
     SessionModule,
     MessageModule,

@@ -6,6 +6,8 @@ import { ApiKey, ApiKeyRole } from '../entities/api-key.entity';
 import { REQUIRED_ROLE_KEY, PUBLIC_KEY, ROLES_KEY } from '../decorators/auth.decorators';
 import { RequestWithTenant } from '../../../common/tenant/request-with-tenant.interface';
 
+const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID || '00000000-0000-0000-0000-000000000001';
+
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
   constructor(
@@ -55,7 +57,7 @@ export class ApiKeyGuard implements CanActivate {
 
     // Attach API key + populate TenantContext fields on request
     request.apiKey   = apiKey;
-    request.tenantId = apiKey.tenantId ?? undefined;
+    request.tenantId = apiKey.tenantId ?? DEFAULT_TENANT_ID;
     request.scopes   = apiKey.scopes   ?? [];
 
     return true;

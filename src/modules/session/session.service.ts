@@ -16,6 +16,9 @@ import { createLogger } from '../../common/services/logger.service';
 import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
 import { HookManager } from '../../core/hooks';
+import { Message, MessageDirection, MessageStatus } from '../message/entities/message.entity';
+import { ConversationUpdateJobData } from '../queue/processors/conversation-update.processor';
+import { Conversation } from '../conversations/entities/conversation.entity';
 
 interface ReconnectState {
   attempts: number;
@@ -37,6 +40,10 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
   constructor(
     @InjectRepository(Session, 'data')
     private readonly sessionRepository: Repository<Session>,
+    @InjectRepository(Message, 'data')
+    private readonly messageRepository: Repository<Message>,
+    @InjectRepository(Conversation, 'data')
+    private readonly conversationRepository: Repository<Conversation>,
     @InjectDataSource('data')
     private readonly dataSource: DataSource,
     private readonly engineFactory: EngineFactory,
@@ -248,7 +255,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
           },
         );
 
-        void this.updateStatus(id, SessionStatus.QR_READY);
+        void this.updateStatus(id, SessionStatus.QR_READY, session.tenantId);
       },
       onReady: (phone: string, pushName: string): void => {
         this.logger.log(`Session ready: ${phone}`, {
@@ -300,16 +307,68 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
             sessionId: id,
             source: 'Engine',
           })
-          .then(({ continue: shouldContinue, data: finalMessage }) => {
+          .then(async ({ continue: shouldContinue, data: finalMessage }) => {
             if (!shouldContinue) {
               // Plugin stopped processing (e.g., auto-reply handled it)
               return;
             }
 
-            // Dispatch to webhooks with potentially modified message
+            const msg = finalMessage as {
+              chatId?: string;
+              direction?: MessageDirection;
+              fromMe?: boolean;
+              id?: string;
+              timestamp?: number;
+              body?: string;
+              from?: string;
+              to?: string;
+              type?: string;
+            };
+            const direction =
+              msg.direction === MessageDirection.OUTGOING || msg.fromMe
+                ? MessageDirection.OUTGOING
+                : MessageDirection.INCOMING;
+
+            if (msg.chatId) {
+              await this.messageRepository.save(
+                this.messageRepository.create({
+                  tenantId: session.tenantId,
+                  sessionId: id,
+                  waMessageId: msg.id,
+                  chatId: msg.chatId,
+                  from: msg.from ?? msg.chatId,
+                  to: msg.to ?? session.phone ?? 'me',
+                  body: msg.body,
+                  type: msg.type ?? 'text',
+                  direction,
+                  timestamp: msg.timestamp,
+                  status: MessageStatus.DELIVERED,
+                }),
+              );
+            }
+
+            if (session.tenantId && msg.chatId) {
+              const jobData: ConversationUpdateJobData = {
+                tenantId: session.tenantId,
+                sessionId: id,
+                chatId: msg.chatId,
+                messageId: msg.id ?? '',
+                messageAt: msg.timestamp ?? Math.floor(Date.now() / 1000),
+                direction: direction === MessageDirection.OUTGOING ? 'outgoing' : 'incoming',
+              };
+
+              await this.applyConversationUpdate(jobData);
+            }
+
+            // Notify external and socket consumers only after local persistence is durable.
             void this.webhookService.dispatch(id, 'message.received', finalMessage as Record<string, unknown>);
-            // Emit real-time event to WebSocket clients
-            this.eventsGateway.emitMessage(id, finalMessage as Record<string, unknown>);
+            this.eventsGateway.emitMessage(id, finalMessage as Record<string, unknown>, session.tenantId);
+          })
+          .catch((error: unknown) => {
+            this.logger.error('Failed to process incoming message', error instanceof Error ? error.message : String(error), {
+              sessionId: id,
+              action: 'message_received_error',
+            });
           });
       },
       onDisconnected: (reason: string): void => {
@@ -329,7 +388,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
           },
         );
 
-        void this.updateStatus(id, SessionStatus.DISCONNECTED);
+        void this.updateStatus(id, SessionStatus.DISCONNECTED, session.tenantId);
 
         // Attempt to reconnect
         this.scheduleReconnect(id, session);
@@ -345,12 +404,12 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
         };
         const newStatus = statusMap[engineState];
         if (newStatus) {
-          void this.updateStatus(id, newStatus);
+          void this.updateStatus(id, newStatus, session.tenantId);
         }
       },
     });
 
-    await this.updateStatus(id, SessionStatus.INITIALIZING);
+    await this.updateStatus(id, SessionStatus.INITIALIZING, session.tenantId);
   }
 
   private scheduleReconnect(id: string, session: Session): void {
@@ -433,7 +492,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
       sessionId: id,
       action: 'stop',
     });
-    await this.updateStatus(id, SessionStatus.DISCONNECTED);
+    await this.updateStatus(id, SessionStatus.DISCONNECTED, session.tenantId);
     return this.findOne(id);
   }
 
@@ -479,7 +538,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     }));
   }
 
-  private async updateStatus(id: string, status: SessionStatus): Promise<void> {
+  private async updateStatus(id: string, status: SessionStatus, tenantId?: string): Promise<void> {
     await this.sessionRepository.update(id, { status });
     this.logger.debug(`Session status updated to ${status}`, {
       sessionId: id,
@@ -487,7 +546,53 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
       action: 'status_update',
     });
     // Emit real-time event to connected WebSocket clients
-    this.eventsGateway.emitSessionStatus(id, status);
+    this.eventsGateway.emitSessionStatus(id, status, undefined, tenantId);
+  }
+
+  private async applyConversationUpdate(data: ConversationUpdateJobData): Promise<void> {
+    const lastMessageAt = new Date(data.messageAt * 1000);
+
+    try {
+      await this.conversationRepository.insert({
+        tenantId: data.tenantId,
+        sessionId: data.sessionId,
+        chatId: data.chatId,
+        contactId: null,
+        assignedUserId: null,
+        lastMessageId: data.messageId,
+        lastMessageAt,
+        unreadCount: data.direction === 'incoming' ? 1 : 0,
+      });
+      this.eventsGateway.emitConversationNew(data.tenantId, {
+        tenantId: data.tenantId,
+        sessionId: data.sessionId,
+        chatId: data.chatId,
+      });
+      return;
+    } catch {
+      await this.conversationRepository
+        .createQueryBuilder()
+        .update(Conversation)
+        .set({
+          lastMessageId: () =>
+            `CASE WHEN "lastMessageAt" <= :lastMessageAt THEN :lastMessageId ELSE "lastMessageId" END`,
+          lastMessageAt: () =>
+            `CASE WHEN "lastMessageAt" <= :lastMessageAt THEN :lastMessageAt ELSE "lastMessageAt" END`,
+          unreadCount: () => (data.direction === 'incoming' ? '"unreadCount" + 1' : '"unreadCount"'),
+        })
+        .where({
+          tenantId: data.tenantId,
+          sessionId: data.sessionId,
+          chatId: data.chatId,
+        })
+        .setParameters({ lastMessageId: data.messageId, lastMessageAt })
+        .execute();
+      this.eventsGateway.emitConversationUpdated(data.tenantId, {
+        tenantId: data.tenantId,
+        sessionId: data.sessionId,
+        chatId: data.chatId,
+      });
+    }
   }
 
   /**

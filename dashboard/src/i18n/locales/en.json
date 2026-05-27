@@ -56,6 +56,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "sessions": "Sessions",
+    "conversations": "Conversations",
     "webhooks": "Webhooks",
     "apiKeys": "API Keys",
     "messageTester": "Message Tester",
@@ -315,6 +316,15 @@
       "title": "No logs found",
       "description": "Audit logs will appear here as actions are performed"
     }
+  },
+  "conversations": {
+    "title": "Conversations",
+    "subtitle": "Review inbox conversations and recent message history",
+    "listTitle": "Inbox",
+    "emptyList": "No conversations yet.",
+    "emptyMessages": "No messages found for this conversation.",
+    "selectPrompt": "Select a conversation",
+    "markRead": "Mark as read"
   },
   "messageTester": {
     "title": "Message Tester",
