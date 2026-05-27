@@ -12,8 +12,6 @@ export class CrmContactsService {
   constructor(
     @InjectRepository(Contact)
     private readonly repo: Repository<Contact>,
-    @InjectRepository(Conversation)
-    private readonly conversationRepo: Repository<Conversation>,
     private readonly ctx: TenantContext,
   ) {}
 
@@ -52,7 +50,7 @@ export class CrmContactsService {
           return manager.update(
             Conversation,
             { tenantId, contactId: item.id },
-            { contactName: item.name, ...(phoneNumber !== null ? { phoneNumber } : {}) },
+            { contactName: item.name, phoneNumber },
           );
         }),
       );
