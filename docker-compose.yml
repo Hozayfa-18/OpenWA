@@ -35,8 +35,8 @@ services:
       - PORT=2785
       - LOG_LEVEL=${LOG_LEVEL:-info}
       # Database
-      - DATABASE_TYPE=${DATABASE_TYPE:-sqlite}
-      - DATABASE_NAME=${DATABASE_NAME:-/app/data/openwa.sqlite}
+      - DATABASE_TYPE=${DATABASE_TYPE:-postgres}
+      - DATABASE_NAME=${DATABASE_NAME:-postgres}
       - DATABASE_HOST=${DATABASE_HOST:-postgres}
       - DATABASE_PORT=${DATABASE_PORT:-5432}
       - DATABASE_USERNAME=${DATABASE_USERNAME:-openwa}
