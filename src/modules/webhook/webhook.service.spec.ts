@@ -14,6 +14,7 @@ import { Session } from '../session/entities/session.entity';
 function createMockWebhook(overrides: Partial<Webhook> = {}): Webhook {
   return {
     id: 'wh-uuid-1',
+    tenantId: '00000000-0000-0000-0000-000000000001',
     sessionId: 'sess-1',
     url: 'https://example.com/webhook',
     events: ['message.received'],

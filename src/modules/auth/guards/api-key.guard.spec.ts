@@ -17,6 +17,8 @@ function createMockApiKey(overrides: Partial<ApiKey> = {}): ApiKey {
     expiresAt: null,
     lastUsedAt: null,
     usageCount: 0,
+    tenantId: null,
+    scopes: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
