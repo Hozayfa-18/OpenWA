@@ -19,6 +19,7 @@ import { HookManager } from '../../core/hooks';
 import { Message, MessageDirection, MessageStatus } from '../message/entities/message.entity';
 import { ConversationUpdateJobData } from '../queue/processors/conversation-update.processor';
 import { Conversation } from '../conversations/entities/conversation.entity';
+import { extractPhoneNumber } from '../conversations/utils/phone';
 
 interface ReconnectState {
   attempts: number;
@@ -552,6 +553,10 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
 
   private async applyConversationUpdate(data: ConversationUpdateJobData): Promise<void> {
     const lastMessageAt = new Date(data.messageAt * 1000);
+    const phoneNumber =
+      extractPhoneNumber(data.chatId) ??
+      extractPhoneNumber(data.from ?? '') ??
+      null;
 
     try {
       await this.conversationRepository.insert({
@@ -560,6 +565,8 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
         chatId: data.chatId,
         contactId: null,
         assignedUserId: null,
+        phoneNumber,
+        contactName: null,
         lastMessageId: data.messageId,
         lastMessageAt,
         unreadCount: data.direction === 'incoming' ? 1 : 0,

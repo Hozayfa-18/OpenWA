@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { createLogger } from '../../../common/services/logger.service';
 import { Conversation } from '../../conversations/entities/conversation.entity';
+import { extractPhoneNumber } from '../../conversations/utils/phone';
 import { EventsGateway } from '../../events/events.gateway';
 import { QUEUE_NAMES } from '../queue-names';
 
@@ -30,7 +31,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
   }
 
   async process(job: Job<ConversationUpdateJobData>): Promise<void> {
-    const { tenantId, sessionId, chatId, messageId, messageAt, direction } = job.data;
+    const { tenantId, sessionId, chatId, messageId, messageAt, direction, from } = job.data;
     const lastMessageAt = new Date(messageAt * 1000);
     const wasCreated = await this.createOrUpdateConversation({
       tenantId,
@@ -39,6 +40,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
       messageId,
       lastMessageAt,
       direction,
+      from,
     });
 
     if (wasCreated) {
@@ -65,12 +67,18 @@ export class ConversationUpdateProcessor extends WorkerHost {
     messageId: string;
     lastMessageAt: Date;
     direction: 'incoming' | 'outgoing';
+    from?: string;
   }): Promise<boolean> {
     const where = {
       tenantId: data.tenantId,
       sessionId: data.sessionId,
       chatId: data.chatId,
     } as FindOptionsWhere<Conversation>;
+
+    const phoneNumber =
+      extractPhoneNumber(data.chatId) ??
+      extractPhoneNumber(data.from ?? '') ??
+      null;
 
     try {
       await this.repo.insert({
@@ -79,6 +87,8 @@ export class ConversationUpdateProcessor extends WorkerHost {
         chatId: data.chatId,
         contactId: null,
         assignedUserId: null,
+        phoneNumber,
+        contactName: null,
         lastMessageId: data.messageId,
         lastMessageAt: data.lastMessageAt,
         unreadCount: data.direction === 'incoming' ? 1 : 0,
