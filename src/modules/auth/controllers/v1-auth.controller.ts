@@ -9,7 +9,7 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { Public, CurrentUser } from '../decorators/auth.decorators';
 
 @ApiTags('v1/auth')
-@Controller('api/v1/auth')
+@Controller('v1/auth')
 export class V1AuthController {
   constructor(private readonly jwtAuthService: JwtAuthService) {}
 

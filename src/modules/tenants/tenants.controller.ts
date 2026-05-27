@@ -9,7 +9,7 @@ import { TenantContext } from '../../common/tenant/tenant-context.service';
 import { UserRole } from '../users/entities/user.entity';
 
 @ApiTags('v1/tenants')
-@Controller('api/v1/tenants')
+@Controller('v1/tenants')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class TenantsController {

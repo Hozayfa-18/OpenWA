@@ -12,7 +12,7 @@ import { Roles } from '../auth/decorators/auth.decorators';
 import { UserRole } from './entities/user.entity';
 
 @ApiTags('v1/users')
-@Controller('api/v1/users')
+@Controller('v1/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class UsersController {

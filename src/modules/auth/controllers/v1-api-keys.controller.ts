@@ -11,7 +11,7 @@ import { UserRole } from '../../users/entities/user.entity';
 import { CreateApiKeyDto } from '../dto';
 
 @ApiTags('v1/api-keys')
-@Controller('api/v1/api-keys')
+@Controller('v1/api-keys')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class V1ApiKeysController {
