@@ -11,10 +11,11 @@ import { CrmContactsService } from './services/crm-contacts.service';
 import { CrmDealsService } from './services/crm-deals.service';
 import { CrmOutboundService } from './services/crm-outbound.service';
 import { CrmUsersService } from './services/crm-users.service';
+import { Conversation } from '../conversations/entities/conversation.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Contact, Deal, CrmUser]),
+    TypeOrmModule.forFeature([Contact, Deal, CrmUser, Conversation]),
     WebhookModule,
   ],
   controllers: [CrmSyncController, CrmInboundWebhookController],
