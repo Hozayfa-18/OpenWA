@@ -20,7 +20,7 @@ export abstract class TenantAwareRepository<T extends { tenantId: string }> {
     return this.repo.findOneBy({
       id,
       tenantId: this.tenantId,
-    } as FindOptionsWhere<T>);
+    } as unknown as FindOptionsWhere<T>);
   }
 
   async save(entity: DeepPartial<T>): Promise<T> {
@@ -34,6 +34,6 @@ export abstract class TenantAwareRepository<T extends { tenantId: string }> {
     await this.repo.delete({
       id,
       tenantId: this.tenantId,
-    } as FindOptionsWhere<T>);
+    } as unknown as FindOptionsWhere<T>);
   }
 }

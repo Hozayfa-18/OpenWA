@@ -1,7 +1,7 @@
 import { Injectable, Inject, Scope, UnauthorizedException } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { UserRole } from '../../modules/users/entities/user.entity';
-import { RequestWithTenant } from './request-with-tenant.interface';
+import type { RequestWithTenant } from './request-with-tenant.interface';
 
 @Injectable({ scope: Scope.REQUEST })
 export class TenantContext {
