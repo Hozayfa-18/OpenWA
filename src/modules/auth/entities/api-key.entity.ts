@@ -1,9 +1,10 @@
+// src/modules/auth/entities/api-key.entity.ts
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 export enum ApiKeyRole {
-  ADMIN = 'admin',
+  ADMIN    = 'admin',
   OPERATOR = 'operator',
-  VIEWER = 'viewer',
+  VIEWER   = 'viewer',
 }
 
 @Entity('api_keys')
@@ -21,11 +22,7 @@ export class ApiKey {
   @Column({ type: 'varchar', length: 8 })
   keyPrefix: string;
 
-  @Column({
-    type: 'varchar',
-    length: 20,
-    default: ApiKeyRole.OPERATOR,
-  })
+  @Column({ type: 'varchar', length: 20, default: ApiKeyRole.OPERATOR })
   role: ApiKeyRole;
 
   @Column({ type: 'simple-array', nullable: true })
@@ -45,6 +42,12 @@ export class ApiKey {
 
   @Column({ type: 'int', default: 0 })
   usageCount: number;
+
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  tenantId: string | null;
+
+  @Column({ type: 'simple-array', nullable: true })
+  scopes: string[] | null;
 
   @CreateDateColumn()
   createdAt: Date;
