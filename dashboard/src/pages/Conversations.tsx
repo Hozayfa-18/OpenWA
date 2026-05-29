@@ -8,8 +8,14 @@ import { useConversationSocket } from '../hooks/useConversationSocket';
 import { conversationApi, messageApi, type ChatMessage, type Conversation } from '../services/api';
 import './Conversations.css';
 
+const formatPhone = (phone: string): string => (phone.startsWith('+') ? phone : `+${phone}`);
+
 const displayName = (conversation: Conversation): string =>
-  conversation.contactName ?? conversation.phoneNumber ?? conversation.chatId;
+  conversation.contactName ?? (conversation.phoneNumber ? formatPhone(conversation.phoneNumber) : conversation.chatId);
+
+// Phone number shown as a secondary line, only when the primary line is a name
+const contactSubtitle = (conversation: Conversation): string | null =>
+  conversation.contactName && conversation.phoneNumber ? formatPhone(conversation.phoneNumber) : null;
 
 export function Conversations() {
   const { t } = useTranslation();
@@ -116,7 +122,7 @@ export function Conversations() {
                 <div className="thread-title">
                   <strong>{displayName(selectedConversation)}</strong>
                   {selectedConversation.contactName && selectedConversation.phoneNumber && (
-                    <span className="thread-subtitle">{selectedConversation.phoneNumber}</span>
+                    <span className="thread-subtitle">{formatPhone(selectedConversation.phoneNumber)}</span>
                   )}
                   <span className="thread-subtitle">{selectedConversation.sessionId}</span>
                   {selectedConversation.assignedUserId && (
@@ -209,6 +215,9 @@ function ConversationRow({
     <button className={`conversation-row ${isSelected ? 'selected' : ''}`} type="button" onClick={onSelect}>
       <span className="conversation-main">
         <span className="conversation-chat-id">{displayName(conversation)}</span>
+        {contactSubtitle(conversation) && (
+          <span className="conversation-subtitle">{contactSubtitle(conversation)}</span>
+        )}
         {conversation.assignedUserId && (
           <span className="conversation-assignee">
             <UserCheck size={12} />

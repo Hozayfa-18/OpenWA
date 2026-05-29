@@ -33,6 +33,7 @@ export interface IncomingMessage {
   fromMe: boolean;
   isGroup: boolean;
   phoneNumber?: string;
+  pushName?: string;
   media?: {
     mimetype: string;
     filename?: string;

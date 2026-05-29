@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { createLogger } from '../../../common/services/logger.service';
+import { extractPhoneNumber } from '../../conversations/utils/phone';
 import { WebhookService } from '../../webhook/webhook.service';
 import { CrmContactsService } from './crm-contacts.service';
 
@@ -37,7 +38,7 @@ export class CrmOutboundService {
 
     if (!contact) {
       payload.createContact = {
-        name: ctx.chatId,
+        name: extractPhoneNumber(ctx.chatId) ?? ctx.chatId,
         contactData: [{ chatType: ctx.chatType, chatId: ctx.chatId }],
         source: 'auto',
       };

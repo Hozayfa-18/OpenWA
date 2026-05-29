@@ -2,6 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { createLogger } from '../../../common/services/logger.service';
 import { CreateContactPayloadDto, CrmInboundWebhookDto } from '../dto/crm-inbound-webhook.dto';
+import { extractPhoneNumber } from '../../conversations/utils/phone';
 import { CrmContactsService } from '../services/crm-contacts.service';
 
 @ApiTags('v1/webhooks')
@@ -35,10 +36,11 @@ export class CrmInboundWebhookController {
       chatId: payload.chatId,
     });
 
+    const name = payload.name ?? extractPhoneNumber(payload.chatId) ?? payload.chatId;
     await this.contactsService.upsert([
       {
         id: payload.contactId,
-        name: payload.chatId,
+        name,
         contactData: [{ chatType: payload.chatType, chatId: payload.chatId }],
       },
     ]);

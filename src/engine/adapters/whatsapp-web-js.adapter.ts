@@ -184,17 +184,58 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
           }
         }
 
+        // Capture sender's push name (always present, used as display fallback)
+        const notifyName = (msg as unknown as Record<string, unknown>)['notifyName'] as string | undefined;
+        if (notifyName) {
+          incomingMessage.pushName = notifyName;
+        }
+
         // Resolve real phone number for non-group chats (covers @lid contacts)
         if (!incomingMessage.isGroup) {
           try {
             const contact = await msg.getContact();
-            if (contact.number) {
+            // [INBOUND-DEBUG] dump resolved contact to see whether a real phone number exists
+            // eslint-disable-next-line no-console
+            console.log('[INBOUND-DEBUG] resolved contact', {
+              number: contact.number,
+              id: contact.id?._serialized,
+              isWAContact: contact.isWAContact,
+              isMe: contact.isMe,
+              pushname: contact.pushname,
+            });
+            // newer WhatsApp returns the obfuscated @lid value in contact.number;
+            // the real phone JID is in contact.id (e.g. 4915906803141@c.us)
+            const contactJid = contact.id?._serialized ?? '';
+            if (contactJid.endsWith('@c.us')) {
+              incomingMessage.phoneNumber = contactJid.slice(0, contactJid.lastIndexOf('@'));
+            } else if (contact.number) {
               incomingMessage.phoneNumber = contact.number;
             }
-          } catch {
+            // msg.notifyName is often empty; fall back to the resolved contact's
+            // saved name, then its pushname
+            if (!incomingMessage.pushName) {
+              incomingMessage.pushName = contact.name || contact.pushname || undefined;
+            }
+          } catch (error) {
             // Phone resolution is best-effort; missing phoneNumber is handled downstream
+            // eslint-disable-next-line no-console
+            console.log('[INBOUND-DEBUG] getContact() failed', String(error));
           }
         }
+
+        // [INBOUND-DEBUG] dump the raw WhatsApp message envelope as it enters the system
+        // eslint-disable-next-line no-console
+        console.log('[INBOUND-DEBUG] raw message envelope', {
+          from: msg.from,
+          to: msg.to,
+          author: (msg as unknown as Record<string, unknown>)['author'],
+          id: msg.id._serialized,
+          suffix: msg.from.slice(msg.from.lastIndexOf('@')),
+          notifyName: (msg as unknown as Record<string, unknown>)['notifyName'],
+          topLevelKeys: Object.keys(msg),
+          derivedChatId: incomingMessage.chatId,
+          derivedPhoneNumber: incomingMessage.phoneNumber,
+        });
 
         this.callbacks.onMessage?.(incomingMessage);
       } catch (error) {

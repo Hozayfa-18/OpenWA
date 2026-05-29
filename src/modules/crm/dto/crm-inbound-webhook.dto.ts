@@ -6,6 +6,10 @@ export class CreateContactPayloadDto {
   @IsString()
   contactId: string;
 
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   @IsString()
   chatType: ContactChatType;
 

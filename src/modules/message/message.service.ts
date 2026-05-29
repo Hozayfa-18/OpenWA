@@ -492,7 +492,7 @@ export class MessageService {
   private async applyConversationUpdate(data: ConversationUpdateJobData): Promise<void> {
     const lastMessageAt = new Date(data.messageAt * 1000);
     const phoneNumber =
-      data.phoneNumber ??
+      (data.phoneNumber ? extractPhoneNumber(data.phoneNumber) : null) ??
       extractPhoneNumber(data.chatId) ??
       (data.from ? extractPhoneNumber(data.from) : null);
 

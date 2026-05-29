@@ -325,6 +325,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
               to?: string;
               type?: string;
               phoneNumber?: string;
+              pushName?: string;
             };
             const direction =
               msg.direction === MessageDirection.OUTGOING || msg.fromMe
@@ -359,6 +360,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
                 direction: direction === MessageDirection.OUTGOING ? 'outgoing' : 'incoming',
                 from: msg.from ?? msg.chatId,
                 phoneNumber: msg.phoneNumber,
+                pushName: msg.pushName,
               };
 
               await this.applyConversationUpdate(jobData);
@@ -556,7 +558,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
   private async applyConversationUpdate(data: ConversationUpdateJobData): Promise<void> {
     const lastMessageAt = new Date(data.messageAt * 1000);
     const phoneNumber =
-      data.phoneNumber ??
+      (data.phoneNumber ? extractPhoneNumber(data.phoneNumber) : null) ??
       extractPhoneNumber(data.chatId) ??
       (data.from ? extractPhoneNumber(data.from) : null);
 
@@ -568,7 +570,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
         contactId: null,
         assignedUserId: null,
         phoneNumber,
-        contactName: null,
+        contactName: data.pushName ?? null,
         lastMessageId: data.messageId,
         lastMessageAt,
         unreadCount: data.direction === 'incoming' ? 1 : 0,
@@ -589,13 +591,14 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
           lastMessageAt: () =>
             `CASE WHEN "lastMessageAt" <= :lastMessageAt THEN :lastMessageAt ELSE "lastMessageAt" END`,
           unreadCount: () => (data.direction === 'incoming' ? '"unreadCount" + 1' : '"unreadCount"'),
+          contactName: () => `COALESCE("contactName", :pushName)`,
         })
         .where({
           tenantId: data.tenantId,
           sessionId: data.sessionId,
           chatId: data.chatId,
         })
-        .setParameters({ lastMessageId: data.messageId, lastMessageAt })
+        .setParameters({ lastMessageId: data.messageId, lastMessageAt, pushName: data.pushName ?? null })
         .execute();
       this.eventsGateway.emitConversationUpdated(data.tenantId, {
         tenantId: data.tenantId,

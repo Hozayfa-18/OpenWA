@@ -20,4 +20,12 @@ describe('extractPhoneNumber', () => {
   it('returns null for plain string with no @ suffix', () => {
     expect(extractPhoneNumber('something')).toBeNull();
   });
+
+  it('returns plain digit-only chatId as phone number', () => {
+    expect(extractPhoneNumber('201234567890')).toBe('201234567890');
+  });
+
+  it('returns phone number with leading + as-is', () => {
+    expect(extractPhoneNumber('+201234567890')).toBe('+201234567890');
+  });
 });

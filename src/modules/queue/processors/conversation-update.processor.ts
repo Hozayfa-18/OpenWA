@@ -17,6 +17,7 @@ export interface ConversationUpdateJobData {
   direction: 'incoming' | 'outgoing';
   from?: string;
   phoneNumber?: string;
+  pushName?: string;
 }
 
 @Processor(QUEUE_NAMES.CONVERSATION_UPDATE)
@@ -71,6 +72,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
     direction: 'incoming' | 'outgoing';
     from?: string;
     phoneNumber?: string;
+    pushName?: string;
   }): Promise<boolean> {
     const where = {
       tenantId: data.tenantId,
@@ -79,7 +81,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
     } as FindOptionsWhere<Conversation>;
 
     const phoneNumber =
-      data.phoneNumber ??
+      (data.phoneNumber ? extractPhoneNumber(data.phoneNumber) : null) ??
       extractPhoneNumber(data.chatId) ??
       (data.from ? extractPhoneNumber(data.from) : null);
 
@@ -91,7 +93,7 @@ export class ConversationUpdateProcessor extends WorkerHost {
         contactId: null,
         assignedUserId: null,
         phoneNumber,
-        contactName: null,
+        contactName: data.pushName ?? null,
         lastMessageId: data.messageId,
         lastMessageAt: data.lastMessageAt,
         unreadCount: data.direction === 'incoming' ? 1 : 0,
@@ -107,9 +109,10 @@ export class ConversationUpdateProcessor extends WorkerHost {
           lastMessageAt: () =>
             `CASE WHEN "lastMessageAt" <= :lastMessageAt THEN :lastMessageAt ELSE "lastMessageAt" END`,
           unreadCount: () => (data.direction === 'incoming' ? '"unreadCount" + 1' : '"unreadCount"'),
+          contactName: () => `COALESCE("contactName", :pushName)`,
         })
         .where(where)
-        .setParameters({ lastMessageId: data.messageId, lastMessageAt: data.lastMessageAt })
+        .setParameters({ lastMessageId: data.messageId, lastMessageAt: data.lastMessageAt, pushName: data.pushName ?? null })
         .execute();
       return false;
     }
