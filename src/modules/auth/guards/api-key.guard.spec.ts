@@ -1,5 +1,6 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
 import { ApiKeyGuard } from './api-key.guard';
 import { AuthService } from '../auth.service';
 import { ApiKey, ApiKeyRole } from '../entities/api-key.entity';
@@ -49,6 +50,7 @@ describe('ApiKeyGuard', () => {
   let guard: ApiKeyGuard;
   let authService: jest.Mocked<Partial<AuthService>>;
   let reflector: jest.Mocked<Reflector>;
+  let jwtService: jest.Mocked<Partial<JwtService>>;
 
   beforeEach(() => {
     authService = {
@@ -60,7 +62,13 @@ describe('ApiKeyGuard', () => {
       getAllAndOverride: jest.fn(),
     } as unknown as jest.Mocked<Reflector>;
 
-    guard = new ApiKeyGuard(authService as AuthService, reflector);
+    jwtService = {
+      verify: jest.fn(() => {
+        throw new Error('not an embed JWT');
+      }),
+    };
+
+    guard = new ApiKeyGuard(authService as AuthService, reflector, jwtService as JwtService);
   });
 
   it('should allow access to @Public() routes without API key', async () => {

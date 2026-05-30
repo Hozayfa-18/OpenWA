@@ -14,6 +14,7 @@ import { User } from '../users/entities/user.entity';
 import { AuthService } from './auth.service';
 import { JwtAuthService } from './jwt-auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { EmbedJwtStrategy } from './strategies/embed-jwt.strategy';
 
 import { AuthController } from './auth.controller';
 import { AuthValidateController } from './auth-validate.controller';
@@ -50,6 +51,7 @@ import { ScopesGuard } from './guards/scopes.guard';
     AuthService,
     JwtAuthService,
     JwtStrategy,
+    EmbedJwtStrategy,
     JwtAuthGuard,
     RolesGuard,
     ScopesGuard,
