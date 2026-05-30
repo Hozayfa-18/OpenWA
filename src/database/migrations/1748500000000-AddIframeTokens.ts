@@ -45,7 +45,7 @@ export class AddIframeTokens1748500000000 implements MigrationInterface {
         )
       `);
       await queryRunner.query(`
-        CREATE INDEX "IDX_iframe_tenant_expires"
+        CREATE INDEX IF NOT EXISTS "IDX_iframe_tenant_expires"
           ON "iframe_tokens" ("tenantId", "expiresAt")
       `);
     }
