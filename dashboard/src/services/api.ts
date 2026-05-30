@@ -443,3 +443,86 @@ export const pluginsApi = {
   getEngines: () => request<Engine[]>('/infra/engines'),
   getCurrentEngine: () => request<{ engineType: string }>('/infra/engines/current'),
 };
+
+// =============================================================================
+// Iframe / Embed API
+// =============================================================================
+
+export interface IframeGeneratePayload {
+  user: { id: string; name?: string };
+  scope: 'global' | 'card';
+  filter?: Array<{ chatType: string; chatId: string; username?: string }>;
+  activeChat?: { channelId?: string; chatType: string; chatId: string };
+  use_events?: { deals?: boolean; messages?: boolean };
+  ttlMinutes?: number;
+}
+
+export interface IframeGenerateResponse {
+  url: string;
+  expiresAt: string;
+}
+
+export interface EmbedAuthPayload {
+  scope: 'global' | 'card';
+  filter: Array<{ chatType: string; chatId: string; username?: string }> | null;
+  activeChat: { channelId?: string; chatType: string; chatId: string } | null;
+  useDealsEvents: boolean;
+  useMessageEvents: boolean;
+  crmUserId: string;
+  crmUserName: string | null;
+}
+
+export interface EmbedAuthResponse {
+  accessToken: string;
+  expiresAt: string;
+  payload: EmbedAuthPayload;
+}
+
+// Authenticated fetch using an embed JWT bearer token (no X-API-Key).
+async function embedRequest<T>(endpoint: string, token: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(error.message || `HTTP ${response.status}`);
+  }
+  if (response.status === 204) return undefined as T;
+  return response.json();
+}
+
+export const iframeApi = {
+  // generate is called by a CRM backend (needs api key); exposed here for completeness/testing.
+  generate: (payload: IframeGeneratePayload) =>
+    request<IframeGenerateResponse>('/v1/iframe', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // exchange is PUBLIC — no auth header. Throws Error with status text on failure.
+  exchange: async (token: string): Promise<EmbedAuthResponse> => {
+    const response = await fetch(`${API_BASE_URL}/v1/iframe/${token}/auth`, { method: 'POST' });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json() as Promise<EmbedAuthResponse>;
+  },
+};
+
+// Embed-scoped data calls (use the embed JWT). Reuse existing Conversation / ChatMessage types.
+export const embedApi = {
+  conversations: (token: string) => embedRequest<Conversation[]>('/v1/conversations', token),
+  messages: (token: string, sessionId: string, chatId: string) =>
+    embedRequest<ChatMessage[]>(
+      `/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/messages`,
+      token,
+    ),
+  sendText: (token: string, sessionId: string, chatId: string, text: string) =>
+    embedRequest<{ messageId: string; timestamp: number }>(
+      `/sessions/${encodeURIComponent(sessionId)}/messages/send-text`,
+      token,
+      { method: 'POST', body: JSON.stringify({ chatId, text }) },
+    ),
+};
