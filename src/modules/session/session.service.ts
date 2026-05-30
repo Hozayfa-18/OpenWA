@@ -1,3 +1,5 @@
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import {
   Injectable,
   NotFoundException,
@@ -6,6 +8,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, In, DataSource } from 'typeorm';
 import { Session, SessionStatus } from './entities/session.entity';
@@ -47,6 +50,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     private readonly conversationRepository: Repository<Conversation>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
     private readonly engineFactory: EngineFactory,
     private readonly eventsGateway: EventsGateway,
     private readonly webhookService: WebhookService,
@@ -161,11 +165,20 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     // Cancel any reconnection attempts
     this.cancelReconnect(id);
 
-    // Stop engine if running
+    // Stop engine and clear auth data so re-use of the same session name starts fresh
     const engine = this.engines.get(id);
     if (engine) {
-      await engine.destroy();
+      await engine.logout(); // logout() deletes the LocalAuth directory; destroy() does not
       this.engines.delete(id);
+    } else {
+      // No live engine (e.g. container was rebooted) — delete the auth directory directly
+      const sessionDataPath = this.configService.get<string>('engine.sessionDataPath') ?? './data/sessions';
+      const sessionDir = path.join(path.resolve(sessionDataPath), `session-${session.name}`);
+      try {
+        await fs.rm(sessionDir, { recursive: true, force: true });
+      } catch (error) {
+        this.logger.warn(`Failed to remove auth dir for session ${session.name}`, { error: String(error) });
+      }
     }
 
     // Execute hook BEFORE delete so plugins can access session data

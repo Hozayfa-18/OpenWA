@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import * as fs from 'fs/promises';
 import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode';
 import * as path from 'path';
@@ -64,9 +65,24 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
 
   private readonly logger = createLogger('WhatsAppWebJsAdapter');
 
+  private async clearChromiumLocks(): Promise<void> {
+    const sessionDir = path.join(path.resolve(this.config.sessionDataPath), `session-${this.config.sessionId}`);
+    // Chromium leaves these behind when the process is killed (e.g. container restart)
+    const lockFiles = ['SingletonLock', 'SingletonSocket', 'SingletonCookie'];
+    for (const file of lockFiles) {
+      try {
+        await fs.unlink(path.join(sessionDir, file));
+      } catch {
+        // ENOENT is expected when no stale lock exists — ignore all errors
+      }
+    }
+  }
+
   async initialize(callbacks: EngineEventCallbacks): Promise<void> {
     this.callbacks = callbacks;
     this.setStatus(EngineStatus.INITIALIZING);
+
+    await this.clearChromiumLocks();
 
     try {
       // Build puppeteer args, including proxy if configured
@@ -282,11 +298,9 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
   async logout(): Promise<void> {
     if (this.client) {
       try {
-        // Logout clears session data - user will need to scan QR again
         await this.client.logout();
       } catch (error) {
         this.logger.warn('Logout failed:', String(error));
-        // Fall back to destroy if logout fails
         try {
           await this.client.destroy();
         } catch (destroyError) {
@@ -295,6 +309,16 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
       }
       this.client = null;
       this.setStatus(EngineStatus.DISCONNECTED);
+    }
+
+    // Always delete auth directory regardless of client state — client.logout() only
+    // removes it when the WA connection is live; a failsafe rm ensures it's gone even
+    // if the client was already disconnected or never initialized.
+    const sessionDir = path.join(path.resolve(this.config.sessionDataPath), `session-${this.config.sessionId}`);
+    try {
+      await fs.rm(sessionDir, { recursive: true, force: true });
+    } catch (error) {
+      this.logger.warn('Failed to remove session auth directory:', String(error));
     }
   }
 
