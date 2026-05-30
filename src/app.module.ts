@@ -2,6 +2,7 @@ import { Module, DynamicModule, Type } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import configuration from './config/configuration';
 import { SessionModule } from './modules/session/session.module';
 import { MessageModule } from './modules/message/message.module';
@@ -31,6 +32,7 @@ import { TenantsModule } from './modules/tenants/tenants.module';
 import { UsersModule } from './modules/users/users.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
+import { IframeModule } from './modules/iframe/iframe.module';
 
 const queueModules: Array<Type | DynamicModule> = [];
 if (process.env.QUEUE_ENABLED === 'true') {
@@ -42,6 +44,7 @@ if (process.env.QUEUE_ENABLED === 'true') {
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    ScheduleModule.forRoot(),
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -93,6 +96,7 @@ if (process.env.QUEUE_ENABLED === 'true') {
     UsersModule,
     CrmModule,
     ConversationsModule,
+    IframeModule,
     EngineModule,
     SessionModule,
     MessageModule,
