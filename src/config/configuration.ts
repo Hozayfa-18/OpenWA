@@ -1,6 +1,10 @@
 export default () => ({
   port: parseInt(process.env.PORT || '2785', 10),
 
+  app: {
+    embedBaseUrl: process.env.EMBED_BASE_URL || 'http://localhost:5173',
+  },
+
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
