@@ -1,0 +1,171 @@
+/* Self-contained styles for the embeddable chat iframe UI.
+   No dependency on dashboard CSS or i18n. */
+
+:root {
+  --embed-bg: #ffffff;
+  --embed-border: #e5e7eb;
+  --embed-text: #111827;
+  --embed-muted: #6b7280;
+  --embed-accent: #2563eb;
+  --embed-accent-hover: #1d4ed8;
+  --embed-chip-bg: #f3f4f6;
+  --embed-chip-hover: #e5e7eb;
+  --embed-radius: 8px;
+}
+
+/* ---------- Header ---------- */
+.embed-chat-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--embed-bg);
+  border-bottom: 1px solid var(--embed-border);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.embed-chat-header__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.embed-contact-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--embed-text);
+}
+
+.embed-chat-id {
+  font-size: 12px;
+  color: var(--embed-muted);
+}
+
+.embed-channel-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--embed-accent);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+/* ---------- Deals row ---------- */
+.embed-deals-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.embed-deal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--embed-text);
+  background: var(--embed-chip-bg);
+  border: 1px solid var(--embed-border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.2;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+button.embed-deal-chip:hover {
+  background: var(--embed-chip-hover);
+}
+
+.embed-deal-chip.display-only {
+  cursor: default;
+}
+
+.embed-deal-chip.closed {
+  color: var(--embed-muted);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.embed-deal-chip--more {
+  color: var(--embed-muted);
+  cursor: default;
+}
+
+.embed-deal-chip--add {
+  color: var(--embed-accent);
+  border-style: dashed;
+  border-color: var(--embed-accent);
+  background: transparent;
+}
+
+button.embed-deal-chip--add:hover {
+  background: #eff6ff;
+}
+
+/* ---------- Message input ---------- */
+.embed-message-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--embed-bg);
+  border-top: 1px solid var(--embed-border);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.embed-message-input textarea {
+  flex: 1;
+  resize: none;
+  min-height: 38px;
+  max-height: 120px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--embed-text);
+  border: 1px solid var(--embed-border);
+  border-radius: var(--embed-radius);
+  outline: none;
+  line-height: 1.4;
+}
+
+.embed-message-input textarea:focus {
+  border-color: var(--embed-accent);
+}
+
+.embed-message-input textarea:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+}
+
+.embed-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  color: #ffffff;
+  background: var(--embed-accent);
+  border: none;
+  border-radius: var(--embed-radius);
+  cursor: pointer;
+}
+
+.embed-send-btn:hover:not(:disabled) {
+  background: var(--embed-accent-hover);
+}
+
+.embed-send-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
