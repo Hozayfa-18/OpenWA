@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, Repository } from 'typeorm';
 import { TenantContext } from '../../common/tenant/tenant-context.service';
@@ -19,13 +19,27 @@ export class ConversationsController {
     private readonly ctx: TenantContext,
   ) {}
 
+  private cardScopeChatIds(): string[] | undefined {
+    const embed = this.ctx.embed;
+    if (embed?.scope === 'card') {
+      return (embed.filter ?? []).map((f) => f.chatId);
+    }
+    return undefined; // global scope or regular user → no restriction
+  }
+
   @Get()
   list(@Query() dto: ListConversationsDto) {
-    return this.conversationsService.findAll(dto);
+    const chatIds = this.cardScopeChatIds();
+    if (chatIds !== undefined && chatIds.length === 0) return Promise.resolve([]);
+    return this.conversationsService.findAll(dto, chatIds);
   }
 
   @Get(':sessionId/:chatId/messages')
   messages(@Param('sessionId') sessionId: string, @Param('chatId') chatId: string): Promise<Message[]> {
+    const chatIds = this.cardScopeChatIds();
+    if (chatIds !== undefined && !chatIds.includes(chatId)) {
+      throw new ForbiddenException('Chat is outside the embed session scope');
+    }
     return this.messageRepository.find({
       where: { sessionId, chatId, tenantId: this.ctx.tenantId } as FindOptionsWhere<Message>,
       order: { createdAt: 'DESC' },

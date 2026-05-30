@@ -19,8 +19,8 @@ export class ConversationsService {
     private readonly contactRepo: Repository<Contact>,
   ) {}
 
-  findAll(dto: ListConversationsDto): Promise<Conversation[]> {
-    return this.repo.findAll(dto);
+  findAll(dto: ListConversationsDto, chatIds?: string[]): Promise<Conversation[]> {
+    return this.repo.findAll(dto, chatIds);
   }
 
   async assign(sessionId: string, chatId: string, dto: AssignConversationDto): Promise<void> {

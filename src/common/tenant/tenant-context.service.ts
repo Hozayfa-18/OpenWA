@@ -1,6 +1,7 @@
 import { Injectable, Inject, Scope, UnauthorizedException } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { UserRole } from '../../modules/users/entities/user.entity';
+import type { EmbedJwtPayload } from '../../modules/auth/strategies/embed-jwt.strategy';
 import type { RequestWithTenant } from './request-with-tenant.interface';
 
 @Injectable({ scope: Scope.REQUEST })
@@ -26,5 +27,9 @@ export class TenantContext {
 
   get scopes(): string[] {
     return this.req.scopes ?? [];
+  }
+
+  get embed(): EmbedJwtPayload | undefined {
+    return this.req.embed;
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, Scope } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsWhere, In, Repository } from 'typeorm';
 import { TenantContext } from '../../../common/tenant/tenant-context.service';
 import { Conversation } from '../entities/conversation.entity';
 
@@ -16,12 +16,16 @@ export class ConversationRepository {
     return this.ctx.tenantId;
   }
 
-  findAll(filters: { sessionId?: string; assignedUserId?: string } = {}): Promise<Conversation[]> {
+  findAll(
+    filters: { sessionId?: string; assignedUserId?: string } = {},
+    chatIds?: string[],
+  ): Promise<Conversation[]> {
     return this.repo.find({
       where: {
         tenantId: this.tenantId,
         ...(filters.sessionId ? { sessionId: filters.sessionId } : {}),
         ...(filters.assignedUserId ? { assignedUserId: filters.assignedUserId } : {}),
+        ...(chatIds && chatIds.length ? { chatId: In(chatIds) } : {}),
       } as FindOptionsWhere<Conversation>,
       order: { lastMessageAt: 'DESC' },
     });
