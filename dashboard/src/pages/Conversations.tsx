@@ -55,6 +55,7 @@ export function Conversations() {
       messageApi.sendText(sessionId, chatId, text),
     onSuccess: () => {
       setReplyText('');
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
       if (selected) {
         void queryClient.invalidateQueries({
           queryKey: ['conversation-messages', selected.sessionId, selected.chatId],

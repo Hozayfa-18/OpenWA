@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import * as fs from 'fs/promises';
-import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
+import { Client, LocalAuth, Message, MessageMedia } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode';
 import * as path from 'path';
 import {
@@ -156,107 +156,20 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
       }
     });
 
+    // `message` fires only for inbound messages from others. Messages you send
+    // yourself — whether through this app or from your own phone — fire on
+    // `message_create` instead. Listen to both so a conversation you start shows
+    // up too; guard `message_create` to fromMe only so inbound isn't processed
+    // twice (the engine emits both events for inbound).
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.client.on('message', async msg => {
-      try {
-        const incomingMessage: IncomingMessage = {
-          id: msg.id._serialized,
-          from: msg.from,
-          to: msg.to,
-          chatId: msg.from,
-          body: msg.body,
-          type: msg.type,
-          timestamp: msg.timestamp,
-          fromMe: msg.fromMe,
-          isGroup: msg.from.endsWith('@g.us'),
-        };
+      await this.dispatchMessage(msg);
+    });
 
-        // Handle media
-        if (msg.hasMedia) {
-          try {
-            const media = await msg.downloadMedia();
-            if (media) {
-              incomingMessage.media = {
-                mimetype: media.mimetype,
-                filename: media.filename || undefined,
-                data: media.data,
-              };
-            }
-          } catch (error) {
-            this.logger.error('Error downloading media', String(error));
-          }
-        }
-
-        // Handle quoted message
-        if (msg.hasQuotedMsg) {
-          try {
-            const quoted = await msg.getQuotedMessage();
-            incomingMessage.quotedMessage = {
-              id: quoted.id._serialized,
-              body: quoted.body,
-            };
-          } catch (error) {
-            this.logger.error('Error getting quoted message', String(error));
-          }
-        }
-
-        // Capture sender's push name (always present, used as display fallback)
-        const notifyName = (msg as unknown as Record<string, unknown>)['notifyName'] as string | undefined;
-        if (notifyName) {
-          incomingMessage.pushName = notifyName;
-        }
-
-        // Resolve real phone number for non-group chats (covers @lid contacts)
-        if (!incomingMessage.isGroup) {
-          try {
-            const contact = await msg.getContact();
-            // [INBOUND-DEBUG] dump resolved contact to see whether a real phone number exists
-            // eslint-disable-next-line no-console
-            console.log('[INBOUND-DEBUG] resolved contact', {
-              number: contact.number,
-              id: contact.id?._serialized,
-              isWAContact: contact.isWAContact,
-              isMe: contact.isMe,
-              pushname: contact.pushname,
-            });
-            // newer WhatsApp returns the obfuscated @lid value in contact.number;
-            // the real phone JID is in contact.id (e.g. 4915906803141@c.us)
-            const contactJid = contact.id?._serialized ?? '';
-            if (contactJid.endsWith('@c.us')) {
-              incomingMessage.phoneNumber = contactJid.slice(0, contactJid.lastIndexOf('@'));
-            } else if (contact.number) {
-              incomingMessage.phoneNumber = contact.number;
-            }
-            // msg.notifyName is often empty; fall back to the resolved contact's
-            // saved name, then its pushname
-            if (!incomingMessage.pushName) {
-              incomingMessage.pushName = contact.name || contact.pushname || undefined;
-            }
-          } catch (error) {
-            // Phone resolution is best-effort; missing phoneNumber is handled downstream
-            // eslint-disable-next-line no-console
-            console.log('[INBOUND-DEBUG] getContact() failed', String(error));
-          }
-        }
-
-        // [INBOUND-DEBUG] dump the raw WhatsApp message envelope as it enters the system
-        // eslint-disable-next-line no-console
-        console.log('[INBOUND-DEBUG] raw message envelope', {
-          from: msg.from,
-          to: msg.to,
-          author: (msg as unknown as Record<string, unknown>)['author'],
-          id: msg.id._serialized,
-          suffix: msg.from.slice(msg.from.lastIndexOf('@')),
-          notifyName: (msg as unknown as Record<string, unknown>)['notifyName'],
-          topLevelKeys: Object.keys(msg),
-          derivedChatId: incomingMessage.chatId,
-          derivedPhoneNumber: incomingMessage.phoneNumber,
-        });
-
-        this.callbacks.onMessage?.(incomingMessage);
-      } catch (error) {
-        this.logger.error('Error processing incoming message', String(error));
-      }
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    this.client.on('message_create', async msg => {
+      if (!msg.fromMe) return;
+      await this.dispatchMessage(msg);
     });
 
     this.client.on('message_ack', (msg, ack) => {
@@ -272,6 +185,95 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
       this.setStatus(EngineStatus.FAILED);
       this.callbacks.onDisconnected?.('Authentication failed');
     });
+  }
+
+  // Normalises an inbound or self-sent whatsapp-web.js message into our engine
+  // shape and forwards it to the session layer. For self-sent messages the chat
+  // counterpart is the recipient (`msg.to`) and the contact to resolve is the
+  // recipient, not us.
+  private async dispatchMessage(msg: Message): Promise<void> {
+    try {
+      const chatId = msg.fromMe ? msg.to : msg.from;
+      const incomingMessage: IncomingMessage = {
+        id: msg.id._serialized,
+        from: msg.from,
+        to: msg.to,
+        chatId,
+        body: msg.body,
+        type: msg.type,
+        timestamp: msg.timestamp,
+        fromMe: msg.fromMe,
+        isGroup: chatId.endsWith('@g.us'),
+      };
+
+      // Handle media
+      if (msg.hasMedia) {
+        try {
+          const media = await msg.downloadMedia();
+          if (media) {
+            incomingMessage.media = {
+              mimetype: media.mimetype,
+              filename: media.filename || undefined,
+              data: media.data,
+            };
+          }
+        } catch (error) {
+          this.logger.error('Error downloading media', String(error));
+        }
+      }
+
+      // Handle quoted message
+      if (msg.hasQuotedMsg) {
+        try {
+          const quoted = await msg.getQuotedMessage();
+          incomingMessage.quotedMessage = {
+            id: quoted.id._serialized,
+            body: quoted.body,
+          };
+        } catch (error) {
+          this.logger.error('Error getting quoted message', String(error));
+        }
+      }
+
+      // Capture the counterpart's push name. For self-sent messages notifyName is
+      // our own name, so only trust it for inbound messages.
+      if (!msg.fromMe) {
+        const notifyName = (msg as unknown as Record<string, unknown>)['notifyName'] as string | undefined;
+        if (notifyName) {
+          incomingMessage.pushName = notifyName;
+        }
+      }
+
+      // Resolve real phone number for non-group chats (covers @lid contacts).
+      // For self-sent messages msg.getContact() returns us, so resolve the
+      // recipient by chat id instead.
+      if (!incomingMessage.isGroup) {
+        try {
+          const contact =
+            msg.fromMe && this.client ? await this.client.getContactById(chatId) : await msg.getContact();
+          // newer WhatsApp returns the obfuscated @lid value in contact.number;
+          // the real phone JID is in contact.id (e.g. 4915906803141@c.us)
+          const contactJid = contact.id?._serialized ?? '';
+          if (contactJid.endsWith('@c.us')) {
+            incomingMessage.phoneNumber = contactJid.slice(0, contactJid.lastIndexOf('@'));
+          } else if (contact.number) {
+            incomingMessage.phoneNumber = contact.number;
+          }
+          // msg.notifyName is often empty; fall back to the resolved contact's
+          // saved name, then its pushname
+          if (!incomingMessage.pushName) {
+            incomingMessage.pushName = contact.name || contact.pushname || undefined;
+          }
+        } catch (error) {
+          // Phone resolution is best-effort; missing phoneNumber is handled downstream
+          this.logger.warn('Contact resolution failed', String(error));
+        }
+      }
+
+      this.callbacks.onMessage?.(incomingMessage);
+    } catch (error) {
+      this.logger.error('Error processing message', String(error));
+    }
   }
 
   private setStatus(status: EngineStatus): void {

@@ -66,6 +66,7 @@ export const EmbedConversations = ({ accessToken, scope }: EmbedConversationsPro
       embedApi.sendText(accessToken, sessionId, chatId, text),
     onSuccess: () => {
       setReplyText('');
+      void queryClient.invalidateQueries({ queryKey: ['embed-conversations', accessToken] });
       if (selected) {
         void queryClient.invalidateQueries({
           queryKey: ['embed-messages', accessToken, selected.sessionId, selected.chatId],
