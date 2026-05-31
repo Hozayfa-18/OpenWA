@@ -11,7 +11,6 @@ export interface EmbedChatThreadProps {
   chatId: string;
   chatType: string;
   contactName: string;
-  deals: EmbedChatHeaderDeal[];
   useDealsEvents: boolean;
   onOpenDeal: (deal: EmbedChatHeaderDeal) => void;
   onAddDeal: () => void;
@@ -31,18 +30,30 @@ export const EmbedChatThread = ({
   chatId,
   chatType,
   contactName,
-  deals,
   useDealsEvents,
   onOpenDeal,
   onAddDeal,
 }: EmbedChatThreadProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [deals, setDeals] = useState<EmbedChatHeaderDeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const cancelledRef = useRef(false);
+
+  const fetchDeals = useCallback(async () => {
+    try {
+      const result = await embedApi.dealsByChat(accessToken, chatType, chatId);
+      if (cancelledRef.current) return;
+      setDeals(result);
+    } catch {
+      if (cancelledRef.current) return;
+      // Deals are supplementary; on failure just clear them.
+      setDeals([]);
+    }
+  }, [accessToken, chatType, chatId]);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -63,10 +74,21 @@ export const EmbedChatThread = ({
     cancelledRef.current = false;
     setLoading(true);
     void fetchMessages();
+    void fetchDeals();
     return () => {
       cancelledRef.current = true;
     };
-  }, [fetchMessages]);
+  }, [fetchMessages, fetchDeals]);
+
+  useEffect(() => {
+    const handler = (): void => {
+      void fetchDeals();
+    };
+    window.addEventListener('focus', handler);
+    return () => {
+      window.removeEventListener('focus', handler);
+    };
+  }, [fetchDeals]);
 
   useEmbedSocket(accessToken, {
     onMessageReceived: (data) => {

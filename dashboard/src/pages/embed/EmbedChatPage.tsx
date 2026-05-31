@@ -96,7 +96,6 @@ const EmbedCardChat = ({ accessToken, payload, chatType, chatId, fallbackSession
         chatId={chatId}
         chatType={chatType}
         contactName={resolved.contactName}
-        deals={[]}
         useDealsEvents={payload.useDealsEvents}
         onOpenDeal={handlers.onOpenDeal}
         onAddDeal={handlers.onAddDeal}
@@ -165,7 +164,6 @@ export const EmbedChatPage = () => {
             chatId={selected.chatId}
             chatType="whatsapp"
             contactName={selected.contactName}
-            deals={[]}
             useDealsEvents={payload.useDealsEvents}
             onOpenDeal={handlers.onOpenDeal}
             onAddDeal={handlers.onAddDeal}

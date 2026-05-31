@@ -526,4 +526,9 @@ export const embedApi = {
       token,
       { method: 'POST', body: JSON.stringify({ chatId, text }) },
     ),
+  dealsByChat: (token: string, chatType: string, chatId: string) =>
+    embedRequest<Array<{ id: string; name: string; closed: boolean; responsibleUserName: string }>>(
+      `/v1/crm/deals/by-chat?chatType=${encodeURIComponent(chatType)}&chatId=${encodeURIComponent(chatId)}`,
+      token,
+    ),
 };
