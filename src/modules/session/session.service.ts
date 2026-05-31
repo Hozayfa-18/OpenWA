@@ -346,6 +346,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
                 : MessageDirection.INCOMING;
 
             if (msg.chatId) {
+<<<<<<< Updated upstream
               await this.messageRepository.save(
                 this.messageRepository.create({
                   tenantId: session.tenantId,
@@ -361,6 +362,56 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
                   status: MessageStatus.DELIVERED,
                 }),
               );
+=======
+              // Messages sent from this app are already persisted by MessageService,
+              // then echoed back by the engine's 'message_create' event. Dedup so the
+              // echo updates the existing row instead of inserting a duplicate.
+              //
+              // 1. Match by WhatsApp message id (the echo arrived after MessageService
+              //    stamped the id onto its row).
+              let existing = msg.id
+                ? await this.messageRepository.findOne({ where: { sessionId: id, waMessageId: msg.id } })
+                : null;
+
+              // 2. Fallback: the echo can arrive before MessageService stamps the id
+              //    (row still null), OR the echo's id may differ from the one the API
+              //    returned. Either way, claim the most recent matching outgoing row
+              //    (same chat + body) rather than inserting a duplicate.
+              if (!existing && direction === MessageDirection.OUTGOING) {
+                existing = await this.messageRepository.findOne({
+                  where: {
+                    sessionId: id,
+                    chatId: msg.chatId,
+                    direction: MessageDirection.OUTGOING,
+                    body: msg.body ?? '',
+                  },
+                  order: { createdAt: 'DESC' },
+                });
+              }
+
+              if (existing) {
+                existing.waMessageId = msg.id ?? existing.waMessageId;
+                existing.status = MessageStatus.DELIVERED;
+                existing.timestamp = msg.timestamp ?? existing.timestamp;
+                await this.messageRepository.save(existing);
+              } else {
+                await this.messageRepository.save(
+                  this.messageRepository.create({
+                    tenantId: session.tenantId,
+                    sessionId: id,
+                    waMessageId: msg.id,
+                    chatId: msg.chatId,
+                    from: msg.from ?? msg.chatId,
+                    to: msg.to ?? session.phone ?? 'me',
+                    body: msg.body,
+                    type: msg.type ?? 'text',
+                    direction,
+                    timestamp: msg.timestamp,
+                    status: MessageStatus.DELIVERED,
+                  }),
+                );
+              }
+>>>>>>> Stashed changes
             }
 
             if (session.tenantId && msg.chatId) {
