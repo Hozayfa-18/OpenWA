@@ -57,6 +57,7 @@
     "dashboard": "Dashboard",
     "sessions": "Sessions",
     "conversations": "Conversations",
+    "crmChat": "CRM Chat",
     "webhooks": "Webhooks",
     "apiKeys": "API Keys",
     "messageTester": "Message Tester",

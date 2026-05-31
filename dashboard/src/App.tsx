@@ -12,6 +12,7 @@ const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login }
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Sessions = lazy(() => import('./pages/Sessions').then(m => ({ default: m.Sessions })));
 const Conversations = lazy(() => import('./pages/Conversations').then(m => ({ default: m.Conversations })));
+const CrmChat = lazy(() => import('./pages/CrmChat').then((m) => ({ default: m.CrmChat })));
 const Webhooks = lazy(() => import('./pages/Webhooks').then(m => ({ default: m.Webhooks })));
 const Logs = lazy(() => import('./pages/Logs').then(m => ({ default: m.Logs })));
 const ApiKeys = lazy(() => import('./pages/ApiKeys').then(m => ({ default: m.ApiKeys })));
@@ -106,6 +107,7 @@ function AppContent() {
             <Route index element={<Dashboard />} />
             <Route path="sessions" element={<Sessions />} />
             <Route path="conversations" element={<Conversations />} />
+            <Route path="crm-chat" element={<CrmChat />} />
             <Route path="webhooks" element={<Webhooks />} />
             {role === 'admin' && <Route path="api-keys" element={<ApiKeys />} />}
             <Route path="logs" element={<Logs />} />
