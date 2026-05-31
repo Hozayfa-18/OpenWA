@@ -346,23 +346,6 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
                 : MessageDirection.INCOMING;
 
             if (msg.chatId) {
-<<<<<<< Updated upstream
-              await this.messageRepository.save(
-                this.messageRepository.create({
-                  tenantId: session.tenantId,
-                  sessionId: id,
-                  waMessageId: msg.id,
-                  chatId: msg.chatId,
-                  from: msg.from ?? msg.chatId,
-                  to: msg.to ?? session.phone ?? 'me',
-                  body: msg.body,
-                  type: msg.type ?? 'text',
-                  direction,
-                  timestamp: msg.timestamp,
-                  status: MessageStatus.DELIVERED,
-                }),
-              );
-=======
               // Messages sent from this app are already persisted by MessageService,
               // then echoed back by the engine's 'message_create' event. Dedup so the
               // echo updates the existing row instead of inserting a duplicate.
@@ -411,7 +394,6 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
                   }),
                 );
               }
->>>>>>> Stashed changes
             }
 
             if (session.tenantId && msg.chatId) {
@@ -621,10 +603,12 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
 
   private async applyConversationUpdate(data: ConversationUpdateJobData): Promise<void> {
     const lastMessageAt = new Date(data.messageAt * 1000);
+    // The conversation counterpart is always the chat (recipient for outgoing,
+    // sender for incoming) — never `from`, which for outgoing messages is our own
+    // session number and would mislabel the conversation with our number.
     const phoneNumber =
       (data.phoneNumber ? extractPhoneNumber(data.phoneNumber) : null) ??
-      extractPhoneNumber(data.chatId) ??
-      (data.from ? extractPhoneNumber(data.from) : null);
+      extractPhoneNumber(data.chatId);
 
     try {
       await this.conversationRepository.insert({
@@ -656,13 +640,20 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
             `CASE WHEN "lastMessageAt" <= :lastMessageAt THEN :lastMessageAt ELSE "lastMessageAt" END`,
           unreadCount: () => (data.direction === 'incoming' ? '"unreadCount" + 1' : '"unreadCount"'),
           contactName: () => `COALESCE("contactName", :pushName)`,
+          // Safety net: backfill the number if an earlier row was created without one.
+          phoneNumber: () => `COALESCE("phoneNumber", :phoneNumber)`,
         })
         .where({
           tenantId: data.tenantId,
           sessionId: data.sessionId,
           chatId: data.chatId,
         })
-        .setParameters({ lastMessageId: data.messageId, lastMessageAt, pushName: data.pushName ?? null })
+        .setParameters({
+          lastMessageId: data.messageId,
+          lastMessageAt,
+          pushName: data.pushName ?? null,
+          phoneNumber,
+        })
         .execute();
       this.eventsGateway.emitConversationUpdated(data.tenantId, {
         tenantId: data.tenantId,
