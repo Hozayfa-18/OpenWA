@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WebhookModule } from '../webhook/webhook.module';
+import { CrmChatDealsController } from './controllers/crm-chat-deals.controller';
 import { CrmInboundWebhookController } from './controllers/crm-inbound-webhook.controller';
 import { CrmSyncController } from './controllers/crm-sync.controller';
 import { Contact } from './entities/contact.entity';
@@ -18,7 +19,7 @@ import { Conversation } from '../conversations/entities/conversation.entity';
     TypeOrmModule.forFeature([Contact, Deal, CrmUser, Conversation]),
     WebhookModule,
   ],
-  controllers: [CrmSyncController, CrmInboundWebhookController],
+  controllers: [CrmSyncController, CrmChatDealsController, CrmInboundWebhookController],
   providers: [CrmAuthGuard, CrmContactsService, CrmDealsService, CrmUsersService, CrmOutboundService],
   exports: [CrmContactsService, CrmDealsService, CrmUsersService, CrmOutboundService],
 })
