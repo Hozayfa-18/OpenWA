@@ -1,18 +1,11 @@
-import { Injectable, BadRequestException, Optional } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Queue } from 'bullmq';
 import { Repository } from 'typeorm';
 import { SessionService } from '../session/session.service';
 import { SendTextMessageDto, SendMediaMessageDto, MessageResponseDto } from './dto';
 import { MediaInput } from '../../engine/interfaces/whatsapp-engine.interface';
 import { Message, MessageDirection, MessageStatus } from './entities/message.entity';
 import { HookManager } from '../../core/hooks';
-import { QUEUE_NAMES } from '../queue/queue-names';
-import { ConversationUpdateJobData } from '../queue/processors/conversation-update.processor';
-import { Conversation } from '../conversations/entities/conversation.entity';
-import { extractPhoneNumber } from '../conversations/utils/phone';
-import { EventsGateway } from '../events/events.gateway';
 
 export interface GetMessagesOptions {
   chatId?: string;
@@ -25,14 +18,8 @@ export class MessageService {
   constructor(
     @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
-    @InjectRepository(Conversation)
-    private readonly conversationRepository: Repository<Conversation>,
     private readonly sessionService: SessionService,
     private readonly hookManager: HookManager,
-    private readonly eventsGateway: EventsGateway,
-    @Optional()
-    @InjectQueue(QUEUE_NAMES.CONVERSATION_UPDATE)
-    private readonly conversationUpdateQueue?: Queue<ConversationUpdateJobData>,
   ) {}
 
   async sendText(sessionId: string, dto: SendTextMessageDto): Promise<MessageResponseDto> {
@@ -67,7 +54,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       // Execute hook after successful send
       await this.hookManager.execute(
@@ -84,7 +70,6 @@ export class MessageService {
       // Mark as failed
       message.status = MessageStatus.FAILED;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       // Execute hook on failure
       await this.hookManager.execute(
@@ -116,7 +101,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       return {
         messageId: result.id,
@@ -148,7 +132,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       return {
         messageId: result.id,
@@ -179,7 +162,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       return {
         messageId: result.id,
@@ -211,7 +193,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       return {
         messageId: result.id,
@@ -276,7 +257,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       return {
         messageId: result.id,
@@ -313,7 +293,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       return {
         messageId: result.id,
@@ -344,7 +323,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       return {
         messageId: result.id,
@@ -378,7 +356,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       return {
         messageId: result.id,
@@ -412,7 +389,6 @@ export class MessageService {
       message.status = MessageStatus.SENT;
       message.timestamp = result.timestamp;
       await this.messageRepository.save(message);
-      await this.enqueueConversationUpdate(message);
 
       return {
         messageId: result.id,
@@ -467,82 +443,6 @@ export class MessageService {
       status: data.status ?? MessageStatus.PENDING,
     });
     return this.messageRepository.save(message);
-  }
-
-  private async enqueueConversationUpdate(message: Message): Promise<void> {
-    if (!message.tenantId) return;
-
-    const jobData: ConversationUpdateJobData = {
-      tenantId: message.tenantId,
-      sessionId: message.sessionId,
-      chatId: message.chatId,
-      messageId: message.waMessageId ?? message.id,
-      messageAt: this.toUnixSeconds(message.timestamp ?? Date.now()),
-      direction: 'outgoing',
-      from: message.from,
-    };
-
-    if (this.conversationUpdateQueue) {
-      await this.conversationUpdateQueue.add('update', jobData);
-    } else {
-      await this.applyConversationUpdate(jobData);
-    }
-  }
-
-  private async applyConversationUpdate(data: ConversationUpdateJobData): Promise<void> {
-    const lastMessageAt = new Date(data.messageAt * 1000);
-    const phoneNumber =
-      (data.phoneNumber ? extractPhoneNumber(data.phoneNumber) : null) ??
-      extractPhoneNumber(data.chatId) ??
-      (data.from ? extractPhoneNumber(data.from) : null);
-
-    try {
-      await this.conversationRepository.insert({
-        tenantId: data.tenantId,
-        sessionId: data.sessionId,
-        chatId: data.chatId,
-        contactId: null,
-        assignedUserId: null,
-        phoneNumber,
-        contactName: null,
-        lastMessageId: data.messageId,
-        lastMessageAt,
-        unreadCount: data.direction === 'incoming' ? 1 : 0,
-      });
-      this.eventsGateway.emitConversationNew(data.tenantId, {
-        tenantId: data.tenantId,
-        sessionId: data.sessionId,
-        chatId: data.chatId,
-      });
-      return;
-    } catch {
-      await this.conversationRepository
-        .createQueryBuilder()
-        .update(Conversation)
-        .set({
-          lastMessageId: () =>
-            `CASE WHEN "lastMessageAt" <= :lastMessageAt THEN :lastMessageId ELSE "lastMessageId" END`,
-          lastMessageAt: () =>
-            `CASE WHEN "lastMessageAt" <= :lastMessageAt THEN :lastMessageAt ELSE "lastMessageAt" END`,
-          unreadCount: () => (data.direction === 'incoming' ? '"unreadCount" + 1' : '"unreadCount"'),
-        })
-        .where({
-          tenantId: data.tenantId,
-          sessionId: data.sessionId,
-          chatId: data.chatId,
-        })
-        .setParameters({ lastMessageId: data.messageId, lastMessageAt })
-        .execute();
-      this.eventsGateway.emitConversationUpdated(data.tenantId, {
-        tenantId: data.tenantId,
-        sessionId: data.sessionId,
-        chatId: data.chatId,
-      });
-    }
-  }
-
-  private toUnixSeconds(timestamp: number): number {
-    return timestamp > 99_999_999_999 ? Math.floor(timestamp / 1000) : timestamp;
   }
 
   // ========== Phase 3: Reactions ==========

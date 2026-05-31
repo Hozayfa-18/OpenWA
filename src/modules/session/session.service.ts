@@ -20,9 +20,20 @@ import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
 import { HookManager } from '../../core/hooks';
 import { Message, MessageDirection, MessageStatus } from '../message/entities/message.entity';
-import { ConversationUpdateJobData } from '../queue/processors/conversation-update.processor';
 import { Conversation } from '../conversations/entities/conversation.entity';
 import { extractPhoneNumber } from '../conversations/utils/phone';
+
+interface ConversationUpdateData {
+  tenantId: string;
+  sessionId: string;
+  chatId: string;
+  messageId: string;
+  messageAt: number;
+  direction: 'incoming' | 'outgoing';
+  from?: string;
+  phoneNumber?: string;
+  pushName?: string;
+}
 
 interface ReconnectState {
   attempts: number;
@@ -397,7 +408,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
             }
 
             if (session.tenantId && msg.chatId) {
-              const jobData: ConversationUpdateJobData = {
+              const jobData: ConversationUpdateData = {
                 tenantId: session.tenantId,
                 sessionId: id,
                 chatId: msg.chatId,
@@ -601,7 +612,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     this.eventsGateway.emitSessionStatus(id, status, undefined, tenantId);
   }
 
-  private async applyConversationUpdate(data: ConversationUpdateJobData): Promise<void> {
+  private async applyConversationUpdate(data: ConversationUpdateData): Promise<void> {
     const lastMessageAt = new Date(data.messageAt * 1000);
     // The conversation counterpart is always the chat (recipient for outgoing,
     // sender for incoming) — never `from`, which for outgoing messages is our own
