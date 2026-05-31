@@ -1,29 +1,29 @@
 # OpenWA - Dockerfile
-# Multi-stage build for production-ready image
+# Multi-stage build for production-ready image (pnpm)
 
 # ===== Stage 1: Builder =====
 FROM node:22-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+# Install build dependencies (for native modules)
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
-COPY package*.json ./
+# Enable pnpm via corepack (version pinned by package.json "packageManager")
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && corepack prepare pnpm@9.12.2 --activate
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
-# Copy source code
+# Copy source code and build
 COPY . .
-
-# Build the application
-RUN npm run build
+RUN pnpm build
 
 # ===== Stage 2: Production =====
 FROM node:22-slim AS production
@@ -60,11 +60,13 @@ RUN groupadd -r openwa && useradd -r -g openwa openwa
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Enable pnpm via corepack (version pinned by package.json "packageManager")
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && corepack prepare pnpm@9.12.2 --activate
 
 # Install production dependencies only
-RUN npm ci --omit=dev && npm cache clean --force
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --prod --frozen-lockfile
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
