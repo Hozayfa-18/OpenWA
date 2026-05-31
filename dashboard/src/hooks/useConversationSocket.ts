@@ -19,7 +19,9 @@ const SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin;
 
 export function useConversationSocket(options: UseConversationSocketOptions = {}) {
   const optionsRef = useRef(options);
-  optionsRef.current = options;
+  useEffect(() => {
+    optionsRef.current = options;
+  });
 
   useEffect(() => {
     const apiKey = sessionStorage.getItem('openwa_api_key');
