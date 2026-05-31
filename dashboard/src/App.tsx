@@ -127,13 +127,15 @@ function App() {
   if (window.location.pathname.startsWith('/embed/')) {
     return (
       <ErrorBoundary>
-        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Loading…</div>}>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/embed/chat" element={<EmbedChatPage />} />
-            </Routes>
-          </BrowserRouter>
-        </Suspense>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Loading…</div>}>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/embed/chat" element={<EmbedChatPage />} />
+              </Routes>
+            </BrowserRouter>
+          </Suspense>
+        </QueryClientProvider>
       </ErrorBoundary>
     );
   }
