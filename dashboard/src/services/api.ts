@@ -512,29 +512,6 @@ export const iframeApi = {
   },
 };
 
-// =============================================================================
-// CRM Chat API (host-side, api-key auth)
-// =============================================================================
-
-export interface ChatDeal {
-  id: string;
-  name: string;
-  closed: boolean;
-  responsibleUserName: string;
-}
-
-export const crmChatApi = {
-  dealsByChat: (chatType: string, chatId: string) =>
-    request<ChatDeal[]>(
-      `/v1/crm/deals/by-chat?chatType=${encodeURIComponent(chatType)}&chatId=${encodeURIComponent(chatId)}`,
-    ),
-  createDeal: (chatType: string, chatId: string, name: string) =>
-    request<ChatDeal>('/v1/crm/deals/by-chat', {
-      method: 'POST',
-      body: JSON.stringify({ chatType, chatId, name }),
-    }),
-};
-
 // Embed-scoped data calls (use the embed JWT). Reuse existing Conversation / ChatMessage types.
 export const embedApi = {
   conversations: (token: string) => embedRequest<Conversation[]>('/v1/conversations', token),
