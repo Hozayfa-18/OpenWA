@@ -18,6 +18,9 @@ const ApiKeys = lazy(() => import('./pages/ApiKeys').then(m => ({ default: m.Api
 const MessageTester = lazy(() => import('./pages/MessageTester').then(m => ({ default: m.MessageTester })));
 const Infrastructure = lazy(() => import('./pages/Infrastructure').then(m => ({ default: m.Infrastructure })));
 const Plugins = lazy(() => import('./pages/Plugins'));
+const EmbedChatPage = lazy(() =>
+  import('./pages/embed/EmbedChatPage').then((m) => ({ default: m.EmbedChatPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,6 +122,19 @@ function AppContent() {
 }
 
 function App() {
+  if (window.location.pathname.startsWith('/embed/')) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Loading…</div>}>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/embed/chat" element={<EmbedChatPage />} />
+            </Routes>
+          </BrowserRouter>
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
