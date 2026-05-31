@@ -463,6 +463,7 @@ export interface IframeGenerateResponse {
 }
 
 export interface EmbedAuthPayload {
+  tenantId: string;
   scope: 'global' | 'card';
   filter: Array<{ chatType: string; chatId: string; username?: string }> | null;
   activeChat: { channelId?: string; chatType: string; chatId: string } | null;
