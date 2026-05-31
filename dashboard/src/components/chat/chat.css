@@ -349,3 +349,21 @@
     max-width: 86%;
   }
 }
+
+/* Single-column variant (no conversation list) — used by card-scope embed */
+.chat-shell--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Fullscreen embed wrapper — chat fills the iframe, no page chrome */
+.embed-conversations {
+  height: 100vh;
+  width: 100%;
+}
+.embed-conversations .chat-shell {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
