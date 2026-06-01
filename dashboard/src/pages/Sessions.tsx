@@ -9,6 +9,9 @@ import { useRole } from '../hooks/useRole';
 import { PageHeader } from '../components/PageHeader';
 import './Sessions.css';
 
+// Statuses for which the QR/connecting modal should stay open while we wait.
+const CONNECTING_STATUSES: string[] = ['initializing', 'connecting', 'qr_ready', 'authenticating'];
+
 export function Sessions() {
   const { t } = useTranslation();
   useDocumentTitle(t('sessions.title'));
@@ -34,12 +37,22 @@ export function Sessions() {
         );
         if (event.status === 'ready') {
           toast.success(t('sessions.toasts.readyTitle'), t('sessions.toasts.readyDesc'));
-        } else if (event.status === 'disconnected') {
-          toast.warning(t('sessions.toasts.disconnectedTitle'), t('sessions.toasts.disconnectedDesc'));
+          // A reconnect from saved auth never produces a QR; close any open
+          // QR/connecting modal for this session once it's live.
+          setQrData(prev => (prev?.sessionId === event.sessionId ? null : prev));
+        } else if (event.status === 'disconnected' || event.status === 'failed') {
+          if (event.status === 'disconnected') {
+            toast.warning(t('sessions.toasts.disconnectedTitle'), t('sessions.toasts.disconnectedDesc'));
+          }
+          setQrData(prev => (prev?.sessionId === event.sessionId ? null : prev));
         }
       },
       [toast, t],
     ),
+    onQRCode: useCallback((event: { sessionId: string; qrCode: string }) => {
+      // Live-fill the modal when the engine actually emits a QR (new login).
+      setQrData(prev => (prev?.sessionId === event.sessionId ? { ...prev, qrCode: event.qrCode } : prev));
+    }, []),
   });
 
   const fetchSessions = async () => {
@@ -62,21 +75,42 @@ export function Sessions() {
   const qrRefreshInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentSessionName = useRef<string>('');
 
-  const fetchQR = useCallback(async (sessionId: string) => {
+  // Refresh the list without flipping the whole page into its loading state.
+  const refreshSessionsSilently = useCallback(async () => {
     try {
-      const qr = await sessionApi.getQR(sessionId);
-      setQrData({ sessionId, sessionName: currentSessionName.current, qrCode: qr.qrCode });
-      if (qr.status === 'ready') {
-        setQrData(null);
-        currentSessionName.current = '';
-        fetchSessions();
-      }
+      setSessions(await sessionApi.list());
     } catch {
-      setQrData(null);
-      currentSessionName.current = '';
-      fetchSessions();
+      /* keep current list */
     }
   }, []);
+
+  const fetchQR = useCallback(
+    async (sessionId: string) => {
+      try {
+        const qr = await sessionApi.getQR(sessionId);
+        if (qr.status === 'ready') {
+          setQrData(null);
+          currentSessionName.current = '';
+          await refreshSessionsSilently();
+          return;
+        }
+        setQrData(prev => (prev?.sessionId === sessionId ? { ...prev, qrCode: qr.qrCode } : prev));
+      } catch {
+        // The QR endpoint isn't serving: either the engine is still starting up,
+        // or it's restoring a saved session and will never show a QR. Refresh
+        // statuses and close the modal only once the session leaves the
+        // connecting states (e.g. becomes ready or disconnected).
+        const updated = await sessionApi.list().catch(() => null);
+        if (updated) setSessions(updated);
+        const current = updated?.find(s => s.id === sessionId);
+        if (!current || !CONNECTING_STATUSES.includes(current.status)) {
+          setQrData(null);
+          currentSessionName.current = '';
+        }
+      }
+    },
+    [refreshSessionsSilently],
+  );
 
   useEffect(() => {
     if (qrData) {
@@ -128,35 +162,37 @@ export function Sessions() {
 
   const handleStart = async (id: string) => {
     const session = sessions.find(s => s.id === id);
-    if (session && ['initializing', 'connecting', 'qr_ready'].includes(session.status)) {
+    if (session && CONNECTING_STATUSES.includes(session.status)) {
       handleShowQR(id);
       return;
     }
 
     try {
       await sessionApi.start(id);
-      setSessions(sessions.map(s => (s.id === id ? { ...s, status: 'connecting' } : s)));
-      await fetchSessions();
-      handleShowQR(id);
+      setSessions(prev => prev.map(s => (s.id === id ? { ...s, status: 'connecting' } : s)));
     } catch (err) {
-      console.error('Failed to start:', err);
-      await fetchSessions();
-      if (err instanceof Error && err.message.includes('already started')) {
-        handleShowQR(id);
+      // "already started" just means the engine is live — fall through and open
+      // the connecting/QR modal. Any other failure is a real error.
+      if (!(err instanceof Error && err.message.includes('already started'))) {
+        console.error('Failed to start:', err);
+        await fetchSessions();
+        return;
       }
     }
+    // Open the modal in its connecting state. It resolves to a QR (new login) or
+    // auto-closes once the session reconnects from saved auth — see fetchQR and
+    // the onSessionStatus handler. No more "QR not available" dead-end.
+    handleShowQR(id);
   };
 
-  const handleShowQR = async (id: string) => {
+  const handleShowQR = (id: string) => {
     const session = sessions.find(s => s.id === id);
     const sessionName = session?.name || '';
-    try {
-      const qr = await sessionApi.getQR(id);
-      setQrData({ sessionId: id, sessionName, qrCode: qr.qrCode });
-    } catch (err) {
-      console.error('Failed to get QR:', err);
-      setError(t('sessions.qr.unavailable'));
-    }
+    currentSessionName.current = sessionName;
+    // Open immediately in the loading state; the QR fills via WS push or the
+    // poll started by the qrData effect. A reconnect with no QR closes itself.
+    setQrData({ sessionId: id, sessionName, qrCode: '' });
+    void fetchQR(id);
   };
 
   const handleStop = async (id: string) => {

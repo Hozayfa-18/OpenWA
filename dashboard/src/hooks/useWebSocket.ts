@@ -25,6 +25,14 @@ interface WebSocketEvents {
   onMessage?: (event: MessageEvent) => void;
 }
 
+// The server wraps every room event in a single `message` socket event using
+// this envelope. There are no per-event socket names (`session:status` etc.).
+interface WSEventEnvelope {
+  type: string;
+  payload?: { event: string; sessionId: string; data: Record<string, unknown> };
+  timestamp?: string;
+}
+
 // Use current origin for WebSocket (goes through nginx proxy in Docker)
 // Falls back to env var or localhost for development
 const SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin;
@@ -32,6 +40,11 @@ const SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin;
 export function useWebSocket(events: WebSocketEvents = {}) {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+
+  // Keep the latest callbacks in a ref so the single `message` listener always
+  // dispatches to current handlers without having to re-bind the socket.
+  const handlersRef = useRef(events);
+  handlersRef.current = events;
 
   const connect = useCallback(() => {
     if (socketRef.current?.connected) return;
@@ -44,7 +57,7 @@ export function useWebSocket(events: WebSocketEvents = {}) {
       return;
     }
 
-    socketRef.current = io(`${SOCKET_URL}/events`, {
+    const socket = io(`${SOCKET_URL}/events`, {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,
@@ -59,19 +72,49 @@ export function useWebSocket(events: WebSocketEvents = {}) {
         apiKey,
       },
     });
+    socketRef.current = socket;
 
-    socketRef.current.on('connect', () => {
+    socket.on('connect', () => {
       console.log('[WebSocket] Connected');
       setIsConnected(true);
+      // Session/QR events are emitted to per-session rooms. Subscribe with the
+      // `*` wildcard so we receive them for every session in the tenant; without
+      // this the client only sits in the bare tenant room and never sees them.
+      socket.emit('message', {
+        type: 'subscribe',
+        sessionId: '*',
+        events: ['session.status', 'session.qr', 'message.received'],
+      });
     });
 
-    socketRef.current.on('disconnect', () => {
+    socket.on('disconnect', () => {
       console.log('[WebSocket] Disconnected');
       setIsConnected(false);
     });
 
-    socketRef.current.on('connect_error', error => {
+    socket.on('connect_error', error => {
       console.warn('[WebSocket] Connection error:', error.message);
+    });
+
+    // All room events arrive on the `message` channel wrapped in an envelope;
+    // unwrap and route by the inner event name.
+    socket.on('message', (msg: WSEventEnvelope) => {
+      if (msg?.type !== 'event' || !msg.payload) return;
+      const { event, sessionId, data } = msg.payload;
+      const timestamp = msg.timestamp ?? new Date().toISOString();
+      const handlers = handlersRef.current;
+
+      switch (event) {
+        case 'session.status':
+          handlers.onSessionStatus?.({ sessionId, status: String(data.status), timestamp });
+          break;
+        case 'session.qr':
+          handlers.onQRCode?.({ sessionId, qrCode: String(data.qrCode), timestamp });
+          break;
+        case 'message.received':
+          handlers.onMessage?.({ sessionId, message: data, timestamp });
+          break;
+      }
     });
   }, []);
 
@@ -85,31 +128,6 @@ export function useWebSocket(events: WebSocketEvents = {}) {
       }
     };
   }, [connect]);
-
-  // Register event handlers
-  useEffect(() => {
-    if (!socketRef.current) return;
-
-    const socket = socketRef.current;
-
-    if (events.onSessionStatus) {
-      socket.on('session:status', events.onSessionStatus);
-    }
-
-    if (events.onQRCode) {
-      socket.on('session:qr', events.onQRCode);
-    }
-
-    if (events.onMessage) {
-      socket.on('session:message', events.onMessage);
-    }
-
-    return () => {
-      socket.off('session:status');
-      socket.off('session:qr');
-      socket.off('session:message');
-    };
-  }, [events.onSessionStatus, events.onQRCode, events.onMessage]);
 
   return { isConnected };
 }

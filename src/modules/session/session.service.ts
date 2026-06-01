@@ -267,7 +267,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     this.engines.set(id, engine);
 
     await engine.initialize({
-      onQRCode: (): void => {
+      onQRCode: (qr: string): void => {
         this.logger.log('QR code generated', {
           sessionId: id,
           action: 'qr_generated',
@@ -284,6 +284,8 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
         );
 
         void this.updateStatus(id, SessionStatus.QR_READY, session.tenantId);
+        // Push the QR to connected dashboards so the modal fills without polling.
+        this.eventsGateway.emitQRCode(id, qr, session.tenantId);
       },
       onReady: (phone: string, pushName: string): void => {
         this.logger.log(`Session ready: ${phone}`, {
