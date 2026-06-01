@@ -89,6 +89,7 @@ export function Conversations() {
         replyInputRef={replyInputRef}
         onMarkRead={(c) => markReadMutation.mutate(c)}
         markReadPending={markReadMutation.isPending}
+        resolveMediaUrl={(m) => conversationApi.mediaUrl(m.sessionId, m.chatId, m.id)}
       />
     </div>
   );

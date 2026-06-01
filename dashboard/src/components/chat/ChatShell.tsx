@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { RefObject } from 'react';
-import { CheckCheck, Loader2, MessageSquare, Send, UserCheck } from 'lucide-react';
+import { CheckCheck, FileText, Loader2, MessageSquare, Send, UserCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ChatMessage, Conversation } from '../../services/api';
 import './chat.css';
@@ -37,6 +37,9 @@ export interface ChatShellProps {
   replyInputRef: RefObject<HTMLTextAreaElement | null>;
   onMarkRead: (conversation: Conversation) => void;
   markReadPending: boolean;
+  // Resolves an authenticated object URL for a media message's bytes. Supplied
+  // per host (dashboard uses the API key, the embed uses its JWT).
+  resolveMediaUrl?: (message: ChatMessage) => Promise<string>;
 }
 
 export function ChatShell({
@@ -55,6 +58,7 @@ export function ChatShell({
   replyInputRef,
   onMarkRead,
   markReadPending,
+  resolveMediaUrl,
 }: ChatShellProps) {
   const { t } = useTranslation();
   const orderedMessages = useMemo(() => [...messages].reverse(), [messages]);
@@ -130,7 +134,7 @@ export function ChatShell({
                 <div className="chat-empty">{t('conversations.emptyMessages')}</div>
               )}
               {orderedMessages.map(message => (
-                <MessageBubble key={message.id} message={message} />
+                <MessageBubble key={message.id} message={message} resolveMediaUrl={resolveMediaUrl} />
               ))}
             </div>
 
@@ -208,18 +212,106 @@ function ConversationRow({
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  resolveMediaUrl,
+}: {
+  message: ChatMessage;
+  resolveMediaUrl?: (message: ChatMessage) => Promise<string>;
+}) {
   const isOutgoing = message.direction === 'outgoing';
   const time = message.timestamp
     ? new Date(message.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
+  const hasMedia = Boolean(message.mediaMimetype);
 
   return (
     <div className={`message-row ${isOutgoing ? 'outgoing' : 'incoming'}`}>
       <div className="message-bubble">
-        <div className="message-body">{message.body || <em>[{message.type}]</em>}</div>
+        {hasMedia && resolveMediaUrl ? (
+          <MediaContent message={message} resolveMediaUrl={resolveMediaUrl} />
+        ) : null}
+        {message.body ? (
+          <div className="message-body">{message.body}</div>
+        ) : hasMedia ? null : (
+          <div className="message-body">
+            <em>[{message.type}]</em>
+          </div>
+        )}
         {time && <div className="message-time">{time}</div>}
       </div>
     </div>
+  );
+}
+
+// Loads media bytes through the authenticated resolver into an object URL and
+// renders the right element for its mimetype. The URL is revoked on unmount.
+function MediaContent({
+  message,
+  resolveMediaUrl,
+}: {
+  message: ChatMessage;
+  resolveMediaUrl: (message: ChatMessage) => Promise<string>;
+}) {
+  const { t } = useTranslation();
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const mimetype = message.mediaMimetype ?? '';
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+    setFailed(false);
+    setUrl(null);
+    resolveMediaUrl(message)
+      .then(resolved => {
+        if (active) {
+          objectUrl = resolved;
+          setUrl(resolved);
+        } else {
+          URL.revokeObjectURL(resolved);
+        }
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [message, resolveMediaUrl]);
+
+  if (failed) {
+    return <div className="message-media message-media--error">{t('conversations.mediaError', 'Media unavailable')}</div>;
+  }
+  if (!url) {
+    return (
+      <div className="message-media message-media--loading">
+        <Loader2 className="animate-spin" size={18} />
+      </div>
+    );
+  }
+
+  if (mimetype.startsWith('image/')) {
+    const isSticker = message.type === 'sticker';
+    return (
+      <img
+        className={`message-media ${isSticker ? 'message-media--sticker' : 'message-media--image'}`}
+        src={url}
+        alt={message.mediaFilename ?? (isSticker ? 'sticker' : 'image')}
+      />
+    );
+  }
+  if (mimetype.startsWith('video/')) {
+    return <video className="message-media message-media--video" src={url} controls />;
+  }
+  if (mimetype.startsWith('audio/')) {
+    return <audio className="message-media message-media--audio" src={url} controls />;
+  }
+  return (
+    <a className="message-media message-media--file" href={url} download={message.mediaFilename ?? 'file'}>
+      <FileText size={18} />
+      <span>{message.mediaFilename ?? t('conversations.mediaDownload', 'Download file')}</span>
+    </a>
   );
 }

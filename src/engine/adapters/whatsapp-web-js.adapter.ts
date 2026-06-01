@@ -210,9 +210,12 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
       if (msg.hasMedia) {
         try {
           const media = await msg.downloadMedia();
-          if (media) {
+          if (media && media.data) {
             incomingMessage.media = {
-              mimetype: media.mimetype,
+              // Stickers (and occasionally other media) come back with an empty
+              // mimetype; fall back to the WhatsApp message type so the byte
+              // stream is still served and rendered with the right element.
+              mimetype: media.mimetype || (msg.type === 'sticker' ? 'image/webp' : 'application/octet-stream'),
               filename: media.filename || undefined,
               data: media.data,
             };

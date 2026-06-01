@@ -100,6 +100,7 @@ export const EmbedConversations = ({ accessToken, scope }: EmbedConversationsPro
         replyInputRef={replyInputRef}
         onMarkRead={(c) => markReadMutation.mutate(c)}
         markReadPending={markReadMutation.isPending}
+        resolveMediaUrl={(m) => embedApi.mediaUrl(accessToken, m.sessionId, m.chatId, m.id)}
       />
     </div>
   );

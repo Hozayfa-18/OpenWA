@@ -3,6 +3,7 @@ import { ConversationsController } from './conversations.controller';
 import { ConversationsService } from './services/conversations.service';
 import { TenantContext } from '../../common/tenant/tenant-context.service';
 import { Message } from '../message/entities/message.entity';
+import { StorageService } from '../../common/storage/storage.service';
 import { Repository } from 'typeorm';
 
 describe('ConversationsController embed scope', () => {
@@ -10,7 +11,8 @@ describe('ConversationsController embed scope', () => {
     const service = { findAll: jest.fn().mockResolvedValue([]) } as unknown as ConversationsService;
     const msgRepo = { find: jest.fn().mockResolvedValue([]) } as unknown as Repository<Message>;
     const ctx = { tenantId: 'tenant-a', embed } as unknown as TenantContext;
-    return { controller: new ConversationsController(service, msgRepo, ctx), service, msgRepo };
+    const storage = { getFile: jest.fn() } as unknown as StorageService;
+    return { controller: new ConversationsController(service, msgRepo, ctx, storage), service, msgRepo };
   };
 
   it('global scope (no embed): list passes undefined chatIds', async () => {
@@ -43,6 +45,6 @@ describe('ConversationsController embed scope', () => {
   it('card scope: messages for disallowed chatId throws Forbidden', async () => {
     const embed = { scope: 'card', filter: [{ chatType: 'whatsapp', chatId: '111' }] };
     const { controller } = makeController(embed);
-    expect(() => controller.messages('sess', '999')).toThrow(ForbiddenException);
+    await expect(controller.messages('sess', '999')).rejects.toThrow(ForbiddenException);
   });
 });

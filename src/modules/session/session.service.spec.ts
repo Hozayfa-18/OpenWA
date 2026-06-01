@@ -10,6 +10,7 @@ import { WebhookService } from '../webhook/webhook.service';
 import { HookManager } from '../../core/hooks';
 import { Message } from '../message/entities/message.entity';
 import { Conversation } from '../conversations/entities/conversation.entity';
+import { StorageService } from '../../common/storage/storage.service';
 
 function createMockSession(overrides: Partial<Session> = {}): Session {
   return {
@@ -121,6 +122,7 @@ describe('SessionService', () => {
         { provide: EventsGateway, useValue: eventsGateway },
         { provide: WebhookService, useValue: webhookService },
         { provide: HookManager, useValue: hookManager },
+        { provide: StorageService, useValue: { putFile: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

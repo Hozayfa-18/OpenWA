@@ -22,6 +22,8 @@ import { HookManager } from '../../core/hooks';
 import { Message, MessageDirection, MessageStatus } from '../message/entities/message.entity';
 import { Conversation } from '../conversations/entities/conversation.entity';
 import { extractPhoneNumber } from '../conversations/utils/phone';
+import { StorageService } from '../../common/storage/storage.service';
+import { buildMediaKey, type StoredMedia } from '../../common/storage/media.util';
 
 interface ConversationUpdateData {
   tenantId: string;
@@ -66,6 +68,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     private readonly eventsGateway: EventsGateway,
     private readonly webhookService: WebhookService,
     private readonly hookManager: HookManager,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -350,6 +353,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
               type?: string;
               phoneNumber?: string;
               pushName?: string;
+              media?: { mimetype: string; filename?: string; data?: string };
             };
             const direction =
               msg.direction === MessageDirection.OUTGOING || msg.fromMe
@@ -370,13 +374,17 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
               // 2. Fallback: the echo can arrive before MessageService stamps the id
               //    (row still null), OR the echo's id may differ from the one the API
               //    returned. Either way, claim the most recent matching outgoing row
-              //    (same chat + body) rather than inserting a duplicate.
+              //    (same chat + type + body) rather than inserting a duplicate. Type
+              //    must match too: media echoes carry an empty body, so without it a
+              //    sticker/image echo would wrongly claim an unrelated empty-body row
+              //    (e.g. a previously sent image) and be swallowed instead of stored.
               if (!existing && direction === MessageDirection.OUTGOING) {
                 existing = await this.messageRepository.findOne({
                   where: {
                     sessionId: id,
                     chatId: msg.chatId,
                     direction: MessageDirection.OUTGOING,
+                    type: msg.type ?? 'text',
                     body: msg.body ?? '',
                   },
                   order: { createdAt: 'DESC' },
@@ -389,6 +397,9 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
                 existing.timestamp = msg.timestamp ?? existing.timestamp;
                 await this.messageRepository.save(existing);
               } else {
+                // Persist any attached media (voice notes, images, documents) to
+                // storage and keep a lightweight reference on the row's metadata.
+                const storedMedia = await this.persistMessageMedia(id, msg.id, msg.media);
                 await this.messageRepository.save(
                   this.messageRepository.create({
                     tenantId: session.tenantId,
@@ -402,6 +413,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
                     direction,
                     timestamp: msg.timestamp,
                     status: MessageStatus.DELIVERED,
+                    metadata: storedMedia ? { media: storedMedia } : undefined,
                   }),
                 );
               }
@@ -610,6 +622,29 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     });
     // Emit real-time event to connected WebSocket clients
     this.eventsGateway.emitSessionStatus(id, status, undefined, tenantId);
+  }
+
+  // Upload inbound message media to storage, returning a metadata reference, or
+  // undefined when there is no media or persistence fails (never throws — a
+  // failed upload must not drop the message row itself).
+  private async persistMessageMedia(
+    sessionId: string,
+    messageId: string | undefined,
+    media: { mimetype: string; filename?: string; data?: string } | undefined,
+  ): Promise<StoredMedia | undefined> {
+    if (!media?.data || !messageId) return undefined;
+    try {
+      const key = buildMediaKey(sessionId, messageId, media.mimetype, media.filename);
+      await this.storageService.putFile(key, Buffer.from(media.data, 'base64'));
+      return { key, mimetype: media.mimetype, filename: media.filename };
+    } catch (error) {
+      this.logger.error(
+        'Failed to persist message media',
+        error instanceof Error ? error.message : String(error),
+        { sessionId, action: 'media_persist_error' },
+      );
+      return undefined;
+    }
   }
 
   private async applyConversationUpdate(data: ConversationUpdateData): Promise<void> {

@@ -100,6 +100,10 @@ export interface ChatMessage {
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   timestamp: number | null;
   createdAt: string;
+  // Present when the message carries media (voice note, image, document). The
+  // bytes are streamed from the authenticated `/media` endpoint, not embedded.
+  mediaMimetype?: string;
+  mediaFilename?: string;
 }
 
 export interface HealthStatus {
@@ -320,6 +324,17 @@ export const messageApi = {
     }),
 };
 
+// Media bytes sit behind authenticated endpoints, so a plain <img>/<audio> src
+// can't load them (the browser won't attach our auth header). Fetch with the
+// header and hand back an object URL the caller must revoke when done.
+async function fetchMediaObjectUrl(endpoint: string, authHeaders: Record<string, string>): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers: authHeaders });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return URL.createObjectURL(await response.blob());
+}
+
 // =============================================================================
 // Conversation API
 // =============================================================================
@@ -328,6 +343,11 @@ export const conversationApi = {
   list: () => request<Conversation[]>('/v1/conversations'),
   messages: (sessionId: string, chatId: string) =>
     request<ChatMessage[]>(`/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/messages`),
+  mediaUrl: (sessionId: string, chatId: string, messageId: string) =>
+    fetchMediaObjectUrl(
+      `/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/media`,
+      sessionStorage.getItem('openwa_api_key') ? { 'X-API-Key': sessionStorage.getItem('openwa_api_key')! } : {},
+    ),
   assign: (sessionId: string, chatId: string, userId: string) =>
     request<void>(`/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/assign`, {
       method: 'PATCH',
@@ -519,6 +539,11 @@ export const embedApi = {
     embedRequest<ChatMessage[]>(
       `/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/messages`,
       token,
+    ),
+  mediaUrl: (token: string, sessionId: string, chatId: string, messageId: string) =>
+    fetchMediaObjectUrl(
+      `/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/media`,
+      { Authorization: `Bearer ${token}` },
     ),
   sendText: (token: string, sessionId: string, chatId: string, text: string) =>
     embedRequest<{ messageId: string; timestamp: number }>(
