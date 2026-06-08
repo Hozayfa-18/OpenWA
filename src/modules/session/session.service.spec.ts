@@ -80,6 +80,7 @@ describe('SessionService', () => {
       initialize: jest.fn().mockResolvedValue(undefined),
       destroy: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
+      logout: jest.fn().mockResolvedValue(undefined),
       getQRCode: jest.fn().mockReturnValue(null),
       getGroups: jest.fn().mockResolvedValue([]),
     };
@@ -120,9 +121,14 @@ describe('SessionService', () => {
           provide: getDataSourceToken(),
           useValue: dataSource,
         },
+        { provide: ConfigService, useValue: { get: jest.fn((_key: string, def?: unknown) => def) } },
         { provide: EngineFactory, useValue: engineFactory },
         { provide: EventsGateway, useValue: eventsGateway },
         { provide: WebhookService, useValue: webhookService },
+        {
+          provide: CrmOutboundService,
+          useValue: { notifyMessageInbound: jest.fn().mockResolvedValue(undefined) },
+        },
         { provide: HookManager, useValue: hookManager },
         { provide: StorageService, useValue: { putFile: jest.fn().mockResolvedValue(undefined) } },
       ],
