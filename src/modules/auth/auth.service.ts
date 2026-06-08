@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+  UnprocessableEntityException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash, randomBytes } from 'crypto';
@@ -6,6 +12,7 @@ import { existsSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { ApiKey, ApiKeyRole } from './entities/api-key.entity';
 import { CreateApiKeyDto, UpdateApiKeyDto } from './dto';
+import { ApiKeyEncryptionService } from './services/api-key-encryption.service';
 import { createLogger } from '../../common/services/logger.service';
 
 const API_KEY_FILE = join(process.cwd(), 'data', '.api-key');
@@ -17,7 +24,22 @@ export class AuthService implements OnModuleInit {
   constructor(
     @InjectRepository(ApiKey)
     private readonly apiKeyRepository: Repository<ApiKey>,
+    private readonly encryption: ApiKeyEncryptionService,
   ) {}
+
+  /** Build the encrypted-at-rest fields for a freshly generated raw key. */
+  private encryptRawKey(rawKey: string): Pick<
+    ApiKey,
+    'keyCiphertext' | 'keyIv' | 'keyAuthTag' | 'keyEncVersion'
+  > {
+    const enc = this.encryption.encrypt(rawKey);
+    return {
+      keyCiphertext: enc.ciphertext,
+      keyIv: enc.iv,
+      keyAuthTag: enc.authTag,
+      keyEncVersion: enc.encVersion,
+    };
+  }
 
   async onModuleInit(): Promise<void> {
     // Seed a default API key if none exist
@@ -85,6 +107,7 @@ export class AuthService implements OnModuleInit {
       keyHash,
       keyPrefix,
       role,
+      ...this.encryptRawKey(rawKey),
     });
 
     return this.apiKeyRepository.save(apiKey);
@@ -104,6 +127,7 @@ export class AuthService implements OnModuleInit {
       allowedIps: dto.allowedIps || null,
       allowedSessions: dto.allowedSessions || null,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+      ...this.encryptRawKey(rawKey),
     });
 
     const saved = await this.apiKeyRepository.save(apiKey);
@@ -176,10 +200,40 @@ export class AuthService implements OnModuleInit {
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
       tenantId,
       scopes: null,
+      ...this.encryptRawKey(rawKey),
     });
 
     const saved = await this.apiKeyRepository.save(apiKey);
     return { apiKey: saved, rawKey };
+  }
+
+  /**
+   * Reveal the raw key for a tenant-owned key (ADR-002). JWT-gated at the
+   * controller. Keys created before encryption have no ciphertext and cannot be
+   * revealed — the caller must rotate to obtain a fresh, revealable key.
+   */
+  async revealForTenant(tenantId: string, id: string): Promise<{ key: string; prefix: string }> {
+    const apiKey = await this.apiKeyRepository.findOne({ where: { id, tenantId } });
+    if (!apiKey) {
+      throw new NotFoundException(`API key '${id}' not found`);
+    }
+    if (
+      apiKey.keyEncVersion == null ||
+      !apiKey.keyCiphertext ||
+      !apiKey.keyIv ||
+      !apiKey.keyAuthTag
+    ) {
+      throw new UnprocessableEntityException(
+        'This key was created before encryption was enabled and cannot be revealed. Rotate it to get a new, revealable key.',
+      );
+    }
+    const key = this.encryption.decrypt({
+      ciphertext: apiKey.keyCiphertext,
+      iv: apiKey.keyIv,
+      authTag: apiKey.keyAuthTag,
+      encVersion: apiKey.keyEncVersion,
+    });
+    return { key, prefix: apiKey.keyPrefix };
   }
 
   async deleteForTenant(tenantId: string, id: string): Promise<void> {
