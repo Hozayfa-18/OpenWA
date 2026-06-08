@@ -212,11 +212,8 @@ export class AuthService implements OnModuleInit {
    * controller. Keys created before encryption have no ciphertext and cannot be
    * revealed — the caller must rotate to obtain a fresh, revealable key.
    */
-  async revealForTenant(tenantId: string, id: string): Promise<{ key: string; prefix: string }> {
-    const apiKey = await this.apiKeyRepository.findOne({ where: { id, tenantId } });
-    if (!apiKey) {
-      throw new NotFoundException(`API key '${id}' not found`);
-    }
+  /** Decrypt a stored key, or 422 if it predates encryption (hash-only). */
+  private decryptStoredKey(apiKey: ApiKey): { key: string; prefix: string } {
     if (
       apiKey.keyEncVersion == null ||
       !apiKey.keyCiphertext ||
@@ -234,6 +231,20 @@ export class AuthService implements OnModuleInit {
       encVersion: apiKey.keyEncVersion,
     });
     return { key, prefix: apiKey.keyPrefix };
+  }
+
+  async revealForTenant(tenantId: string, id: string): Promise<{ key: string; prefix: string }> {
+    const apiKey = await this.apiKeyRepository.findOne({ where: { id, tenantId } });
+    if (!apiKey) {
+      throw new NotFoundException(`API key '${id}' not found`);
+    }
+    return this.decryptStoredKey(apiKey);
+  }
+
+  /** Admin (non-tenant-scoped) reveal — used by the legacy API-key-guarded admin route. */
+  async reveal(id: string): Promise<{ key: string; prefix: string }> {
+    const apiKey = await this.findOne(id);
+    return this.decryptStoredKey(apiKey);
   }
 
   /**
