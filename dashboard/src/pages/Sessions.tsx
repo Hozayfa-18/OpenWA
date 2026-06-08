@@ -28,6 +28,54 @@ export function Sessions() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyValue, setApiKeyValue] = useState<string | null>(null);
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const [apiKeyCopied, setApiKeyCopied] = useState(false);
+  const [primaryKeyId, setPrimaryKeyId] = useState<string | null>(null);
+  const [apiKeyRotating, setApiKeyRotating] = useState(false);
+
+  const handleShowApiKey = async () => {
+    setShowApiKey(true);
+    setApiKeyLoading(true);
+    setApiKeyError(null);
+    setApiKeyValue(null);
+    setPrimaryKeyId(null);
+    try {
+      const keys = await apiKeyApi.list();
+      const primary = keys.find(k => k.isActive) ?? keys[0];
+      if (!primary) {
+        setApiKeyError('No API key found. Create one on the API Keys page first.');
+        return;
+      }
+      setPrimaryKeyId(primary.id);
+      const res = await apiKeyApi.reveal(primary.id);
+      setApiKeyValue(res.key);
+    } catch (err) {
+      setApiKeyError(err instanceof Error ? err.message : 'Could not reveal API key');
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
+
+  // Rotate the primary key (used when it predates encryption and can't be
+  // revealed). The new key IS revealable; show it immediately so the tenant can
+  // copy it. The old key keeps working for a 24h grace window.
+  const handleRotatePrimary = async () => {
+    if (!primaryKeyId) return;
+    setApiKeyRotating(true);
+    setApiKeyError(null);
+    try {
+      const res = await apiKeyApi.rotate(primaryKeyId);
+      setApiKeyValue(res.apiKey);
+      setPrimaryKeyId(res.id);
+    } catch (err) {
+      setApiKeyError(err instanceof Error ? err.message : 'Could not rotate API key');
+    } finally {
+      setApiKeyRotating(false);
+    }
+  };
 
   useWebSocket({
     onSessionStatus: useCallback(
@@ -245,14 +293,73 @@ export function Sessions() {
         title={t('sessions.title')}
         subtitle={t('sessions.subtitle')}
         actions={
-          canWrite && (
-            <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
-              <Plus size={18} />
-              {t('sessions.newSession')}
+          <>
+            <button className="btn-secondary" onClick={handleShowApiKey}>
+              <KeyRound size={18} />
+              Show API Key
             </button>
-          )
+            {canWrite && (
+              <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
+                <Plus size={18} />
+                {t('sessions.newSession')}
+              </button>
+            )}
+          </>
         }
       />
+
+      {showApiKey && (
+        <div className="modal-overlay" onClick={() => setShowApiKey(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Your API Key</h2>
+              <button className="btn-icon" onClick={() => setShowApiKey(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              {apiKeyLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '1.5rem' }}>
+                  <Loader2 className="animate-spin" size={24} />
+                </div>
+              ) : apiKeyError ? (
+                <p style={{ color: 'var(--text-muted)' }}>{apiKeyError}</p>
+              ) : (
+                <>
+                  <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+                    Authenticate your requests by sending this key in the <code>X-API-Key</code> header.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <code
+                      style={{
+                        flex: 1,
+                        padding: '0.75rem',
+                        background: 'var(--bg-secondary)',
+                        borderRadius: '6px',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {apiKeyValue}
+                    </code>
+                    <button
+                      className="btn-primary"
+                      onClick={() => {
+                        if (apiKeyValue) {
+                          navigator.clipboard.writeText(apiKeyValue);
+                          setApiKeyCopied(true);
+                          setTimeout(() => setApiKeyCopied(false), 2000);
+                        }
+                      }}
+                    >
+                      {apiKeyCopied ? <Check size={16} /> : <Copy size={16} />}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="filters-bar">
         <div className="search-input">
