@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { SessionService } from './session.service';
 import { CreateSessionDto, SessionResponseDto, QRCodeResponseDto } from './dto';
@@ -7,13 +7,17 @@ import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/entities/audit-log.entity';
 import { RequireRole } from '../auth/decorators/auth.decorators';
 import { ApiKeyRole } from '../auth/entities/api-key.entity';
+import { TenantContext } from '../../common/tenant/tenant-context.service';
+import { TenantScopeGuard } from '../../common/tenant/tenant-scope.guard';
 
 @ApiTags('sessions')
-@Controller('sessions')
+@UseGuards(TenantScopeGuard)
+@Controller(['sessions', 'v1/sessions'])
 export class SessionController {
   constructor(
     private readonly sessionService: SessionService,
     private readonly auditService: AuditService,
+    private readonly ctx: TenantContext,
   ) {}
 
   // Transform entity to DTO with lastActive field name
@@ -57,7 +61,7 @@ export class SessionController {
     type: [SessionResponseDto],
   })
   async findAll(): Promise<SessionResponseDto[]> {
-    const sessions = await this.sessionService.findAll();
+    const sessions = await this.sessionService.findAllForTenant(this.ctx.tenantId);
     return sessions.map(s => this.transformSession(s));
   }
 
@@ -182,6 +186,6 @@ export class SessionController {
     byStatus: Record<string, number>;
     memoryUsage: { heapUsed: number; heapTotal: number; rss: number };
   }> {
-    return this.sessionService.getStats();
+    return this.sessionService.getStats(this.ctx.tenantId);
   }
 }
