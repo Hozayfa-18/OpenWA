@@ -7,8 +7,9 @@ import {
   createColumnHelper,
   type VisibilityState,
 } from '@tanstack/react-table';
-import { Plus, Copy, RefreshCw, Trash2, Eye, EyeOff, Loader2, X, Check, KeyRound, AlertTriangle } from 'lucide-react';
+import { Plus, Copy, RefreshCw, RotateCw, Trash2, Eye, EyeOff, Loader2, X, Check, KeyRound, AlertTriangle } from 'lucide-react';
 import type { ApiKey } from '../services/api';
+import { apiKeyApi } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useApiKeysQuery, useCreateApiKeyMutation, useDeleteApiKeyMutation, useRevokeApiKeyMutation } from '../hooks/queries';
 import { PageHeader } from '../components/PageHeader';
