@@ -1,30 +1,56 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { createLogger } from '../../../common/services/logger.service';
 import { extractPhoneNumber } from '../../conversations/utils/phone';
 import { WebhookService } from '../../webhook/webhook.service';
-import { CrmContactsService } from './crm-contacts.service';
+import { Contact, ContactChatType } from '../entities/contact.entity';
 
 export interface InboundMessageContext {
   sessionId: string;
   tenantId: string;
-  chatType: string;
+  chatType: ContactChatType;
   chatId: string;
   messageId: string;
   body: string;
   timestamp: number;
 }
 
+/**
+ * Bridges inbound WhatsApp messages to the tenant's CRM via a signed
+ * `message.inbound` webhook (ADR-005). When no contact matches, a `createContact`
+ * hint is attached so the tenant's CRM creates the lead (lead creation stays on
+ * their side).
+ *
+ * This is a SINGLETON with tenant-explicit lookups (its own Contact repository,
+ * no request-scoped TenantContext) so it can be called from the engine's
+ * message callback, which runs outside any HTTP request.
+ */
 @Injectable()
 export class CrmOutboundService {
   private readonly logger = createLogger('CrmOutboundService');
 
   constructor(
     private readonly webhookService: WebhookService,
-    private readonly contactsService: CrmContactsService,
+    @InjectRepository(Contact)
+    private readonly contactRepository: Repository<Contact>,
   ) {}
 
+  private async findContact(
+    tenantId: string,
+    chatType: ContactChatType,
+    chatId: string,
+  ): Promise<Contact | null> {
+    const contacts = await this.contactRepository.find({ where: { tenantId } });
+    return (
+      contacts.find(contact =>
+        contact.contactData.some(entry => entry.chatType === chatType && entry.chatId === chatId),
+      ) ?? null
+    );
+  }
+
   async notifyMessageInbound(ctx: InboundMessageContext): Promise<void> {
-    const contact = await this.contactsService.findByChatId(ctx.chatType, ctx.chatId);
+    const contact = await this.findContact(ctx.tenantId, ctx.chatType, ctx.chatId);
 
     const payload: Record<string, unknown> = {
       messageId: ctx.messageId,
