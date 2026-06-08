@@ -2,11 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken, getDataSourceToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SessionService } from './session.service';
 import { Session, SessionStatus } from './entities/session.entity';
 import { EngineFactory } from '../../engine/engine.factory';
 import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
+import { CrmOutboundService } from '../crm/services/crm-outbound.service';
 import { HookManager } from '../../core/hooks';
 import { Message } from '../message/entities/message.entity';
 import { Conversation } from '../conversations/entities/conversation.entity';
@@ -345,7 +347,7 @@ describe('SessionService', () => {
       ];
       (repository.find as jest.Mock).mockResolvedValue(sessions);
 
-      const stats = await service.getStats();
+      const stats = await service.getStats('00000000-0000-0000-0000-000000000001');
 
       expect(stats.total).toBe(3);
       expect(stats.ready).toBe(2);
