@@ -236,6 +236,93 @@ export class AuthService implements OnModuleInit {
     return { key, prefix: apiKey.keyPrefix };
   }
 
+  /**
+   * Rotate a tenant key (ADR-006). Atomically issues a new key (inheriting role,
+   * IP/session restrictions, expiry) and starts the grace window on the old one.
+   * `gracePeriodHours` 0 = revoke the old key immediately.
+   */
+  async rotateForTenant(
+    tenantId: string,
+    id: string,
+    gracePeriodHours?: number,
+  ): Promise<{
+    id: string;
+    name: string;
+    keyPrefix: string;
+    apiKey: string;
+    oldKeyId: string;
+    oldKeyExpiresAt: Date;
+  }> {
+    const oldKey = await this.apiKeyRepository.findOne({ where: { id, tenantId } });
+    if (!oldKey) {
+      throw new NotFoundException(`API key '${id}' not found`);
+    }
+
+    const graceHours =
+      gracePeriodHours ??
+      parseInt(process.env.API_KEY_GRACE_PERIOD_HOURS ?? '24', 10);
+    const now = new Date();
+    const oldKeyExpiresAt = new Date(now.getTime() + Math.max(0, graceHours) * 3_600_000);
+
+    const rawKey = `owa_k1_${randomBytes(32).toString('hex')}`;
+
+    const newKey = this.apiKeyRepository.create({
+      name: oldKey.name,
+      keyHash: this.hashKey(rawKey),
+      keyPrefix: rawKey.substring(0, 8),
+      role: oldKey.role,
+      allowedIps: oldKey.allowedIps,
+      allowedSessions: oldKey.allowedSessions,
+      expiresAt: oldKey.expiresAt,
+      tenantId,
+      scopes: oldKey.scopes,
+      rotatedFrom: oldKey.id,
+      ...this.encryptRawKey(rawKey),
+    });
+
+    oldKey.rotatedAt = now;
+    oldKey.gracePeriodEndsAt = oldKeyExpiresAt;
+    if (graceHours <= 0) {
+      oldKey.isActive = false;
+    }
+
+    const saved = await this.apiKeyRepository.manager.transaction(async manager => {
+      await manager.save(oldKey);
+      return manager.save(newKey);
+    });
+
+    this.logger.log(`API key rotated: ${oldKey.name}`, {
+      oldKeyId: oldKey.id,
+      newKeyId: saved.id,
+      action: 'api_key_rotated',
+    });
+
+    return {
+      id: saved.id,
+      name: saved.name,
+      keyPrefix: saved.keyPrefix,
+      apiKey: rawKey,
+      oldKeyId: oldKey.id,
+      oldKeyExpiresAt,
+    };
+  }
+
+  /**
+   * Deactivate rotated keys whose grace window has fully closed. Called by the
+   * scheduled cleanup job (ADR-006). Returns the number deactivated.
+   */
+  async deactivateExpiredRotatedKeys(): Promise<number> {
+    const result = await this.apiKeyRepository
+      .createQueryBuilder()
+      .update(ApiKey)
+      .set({ isActive: false })
+      .where('gracePeriodEndsAt IS NOT NULL')
+      .andWhere('gracePeriodEndsAt < :now', { now: new Date() })
+      .andWhere('isActive = :active', { active: true })
+      .execute();
+    return result.affected ?? 0;
+  }
+
   async deleteForTenant(tenantId: string, id: string): Promise<void> {
     const key = await this.apiKeyRepository.findOne({ where: { id, tenantId } });
     if (!key) throw new NotFoundException(`API key '${id}' not found`);
@@ -262,6 +349,12 @@ export class AuthService implements OnModuleInit {
 
     if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
       throw new UnauthorizedException('API key has expired');
+    }
+
+    // Reject a rotated key once its grace window has closed (ADR-006). A cleanup
+    // job also flips isActive=false, but this is the enforcement line.
+    if (apiKey.gracePeriodEndsAt && apiKey.gracePeriodEndsAt < new Date()) {
+      throw new UnauthorizedException('API key has been rotated and is no longer valid');
     }
 
     // Check IP whitelist
