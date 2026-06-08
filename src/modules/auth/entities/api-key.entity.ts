@@ -22,6 +22,36 @@ export class ApiKey {
   @Column({ type: 'varchar', length: 8 })
   keyPrefix: string;
 
+  // ── Reversible storage (ADR-002) ────────────────────────────────────────
+  // The raw key is additionally stored AES-256-GCM encrypted so it can be
+  // re-displayed ("always-viewable") and rotated. `keyHash` stays the lookup
+  // index; decryption only ever happens on an explicit, JWT-gated reveal.
+  // Keys created before this feature have no ciphertext — `keyEncVersion` is
+  // null and reveal returns a "rotate to get a new key" error.
+  @Column({ type: 'text', nullable: true })
+  keyCiphertext: string | null;
+
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  keyIv: string | null;
+
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  keyAuthTag: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  keyEncVersion: number | null;
+
+  // ── Rotation (ADR-006) ──────────────────────────────────────────────────
+  @Column({ type: 'uuid', nullable: true })
+  rotatedFrom: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  rotatedAt: Date | null;
+
+  // While set in the future, a rotated key still authenticates (grace window);
+  // once past, validation rejects it and a cleanup job deactivates it.
+  @Column({ type: 'timestamp', nullable: true })
+  gracePeriodEndsAt: Date | null;
+
   @Column({ type: 'varchar', length: 20, default: ApiKeyRole.OPERATOR })
   role: ApiKeyRole;
 
