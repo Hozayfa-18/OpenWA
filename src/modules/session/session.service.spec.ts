@@ -240,7 +240,8 @@ describe('SessionService', () => {
       // Now delete
       await service.delete('sess-uuid-1');
 
-      expect(mockEngine.destroy).toHaveBeenCalled();
+      // delete() logs out (which also clears the LocalAuth dir) rather than just destroy()
+      expect(mockEngine.logout).toHaveBeenCalled();
     });
   });
 

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { AuthService } from './auth.service';
+import { ApiKeyEncryptionService } from './services/api-key-encryption.service';
 import { ApiKey, ApiKeyRole } from './entities/api-key.entity';
 
 // Helpers
@@ -15,6 +16,13 @@ function createMockApiKey(overrides: Partial<ApiKey> = {}): ApiKey {
     name: 'Test Key',
     keyHash: hashKey('test-key'),
     keyPrefix: 'test-key-pre',
+    keyCiphertext: null,
+    keyIv: null,
+    keyAuthTag: null,
+    keyEncVersion: null,
+    rotatedFrom: null,
+    rotatedAt: null,
+    gracePeriodEndsAt: null,
     role: ApiKeyRole.OPERATOR,
     allowedIps: null,
     allowedSessions: null,
@@ -47,6 +55,7 @@ describe('AuthService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
+        ApiKeyEncryptionService,
         {
           provide: getRepositoryToken(ApiKey),
           useValue: repository,

@@ -274,7 +274,27 @@ export const apiKeyApi = {
     }),
   delete: (id: string) => request<void>(`/auth/api-keys/${id}`, { method: 'DELETE' }),
   revoke: (id: string) => request<ApiKey>(`/auth/api-keys/${id}/revoke`, { method: 'POST' }),
+  reveal: (id: string) => request<RevealKeyResponse>(`/auth/api-keys/${id}/reveal`),
+  rotate: (id: string, gracePeriodHours?: number) =>
+    request<RotateKeyResponse>(`/auth/api-keys/${id}/rotate`, {
+      method: 'POST',
+      body: JSON.stringify(gracePeriodHours === undefined ? {} : { gracePeriodHours }),
+    }),
 };
+
+export interface RevealKeyResponse {
+  key: string;
+  prefix: string;
+}
+
+export interface RotateKeyResponse {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  apiKey: string;
+  oldKeyId: string;
+  oldKeyExpiresAt: string;
+}
 
 // =============================================================================
 // Audit/Logs API

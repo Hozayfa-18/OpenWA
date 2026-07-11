@@ -323,7 +323,15 @@ export function Sessions() {
                   <Loader2 className="animate-spin" size={24} />
                 </div>
               ) : apiKeyError ? (
-                <p style={{ color: 'var(--text-muted)' }}>{apiKeyError}</p>
+                <div>
+                  <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>{apiKeyError}</p>
+                  {primaryKeyId && (
+                    <button className="btn-primary" onClick={handleRotatePrimary} disabled={apiKeyRotating}>
+                      {apiKeyRotating ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+                      Rotate to get a new key
+                    </button>
+                  )}
+                </div>
               ) : (
                 <>
                   <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>

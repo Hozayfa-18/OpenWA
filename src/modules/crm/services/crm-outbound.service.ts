@@ -36,11 +36,7 @@ export class CrmOutboundService {
     private readonly contactRepository: Repository<Contact>,
   ) {}
 
-  private async findContact(
-    tenantId: string,
-    chatType: ContactChatType,
-    chatId: string,
-  ): Promise<Contact | null> {
+  private async findContact(tenantId: string, chatType: ContactChatType, chatId: string): Promise<Contact | null> {
     const contacts = await this.contactRepository.find({ where: { tenantId } });
     return (
       contacts.find(contact =>

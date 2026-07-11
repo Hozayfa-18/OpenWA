@@ -32,7 +32,7 @@ const columnHelper = createColumnHelper<ApiKey>();
 export function ApiKeys() {
   const { t } = useTranslation();
   useDocumentTitle(t('apiKeys.title'));
-  const { data: apiKeys = [], isLoading: loading } = useApiKeysQuery();
+  const { data: apiKeys = [], isLoading: loading, refetch } = useApiKeysQuery();
   const createMutation = useCreateApiKeyMutation();
   const deleteMutation = useDeleteApiKeyMutation();
   const revokeMutation = useRevokeApiKeyMutation();
@@ -44,6 +44,10 @@ export function ApiKeys() {
   const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'revoke'; id: string; name: string } | null>(
     null,
   );
+  const [revealed, setRevealed] = useState<{ id: string; value: string } | null>(null);
+  const [revealError, setRevealError] = useState<string | null>(null);
+  const [rotateConfirm, setRotateConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const windowWidth = useWindowSize();
   const isMobile = windowWidth < 768;
@@ -86,6 +90,36 @@ export function ApiKeys() {
     if (confirmAction.type === 'delete') handleDelete(confirmAction.id);
     else handleRevoke(confirmAction.id);
     setConfirmAction(null);
+  };
+
+  const handleReveal = async (id: string) => {
+    setBusyId(id);
+    setRevealError(null);
+    try {
+      const res = await apiKeyApi.reveal(id);
+      setRevealed({ id, value: res.key });
+    } catch (err) {
+      // 422 = key predates encryption and cannot be revealed → prompt rotation.
+      setRevealError(err instanceof Error ? err.message : 'Could not reveal key');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleRotate = async (id: string) => {
+    setBusyId(id);
+    try {
+      const res = await apiKeyApi.rotate(id);
+      await refetch();
+      setRotateConfirm(null);
+      // Reuse the "created key" modal to surface the new key once.
+      setCreatedKey(res.apiKey);
+      setShowModal(true);
+    } catch (err) {
+      console.error('Failed to rotate:', err);
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const toggleKeyVisibility = (id: string) => {
@@ -154,11 +188,28 @@ export function ApiKeys() {
             <span className="actions-cell">
               <button
                 className="icon-btn"
+                onClick={() => handleReveal(apiKey.id)}
+                disabled={busyId === apiKey.id}
+                title="Show full API key"
+              >
+                {busyId === apiKey.id ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+              </button>
+              <button
+                className="icon-btn"
                 onClick={() => copyToClipboard(apiKey.keyPrefix, apiKey.id)}
                 title={t('apiKeys.actions.copy')}
               >
                 {copied === apiKey.id ? <Check size={16} /> : <Copy size={16} />}
               </button>
+              {apiKey.isActive && (
+                <button
+                  className="icon-btn"
+                  onClick={() => setRotateConfirm({ id: apiKey.id, name: apiKey.name })}
+                  title="Rotate key"
+                >
+                  <RotateCw size={16} />
+                </button>
+              )}
               {apiKey.isActive && (
                 <button
                   className="icon-btn"
@@ -180,7 +231,7 @@ export function ApiKeys() {
         },
       }),
     ],
-    [visibleKeys, copied, t],
+    [visibleKeys, copied, busyId, t],
   );
 
   const table = useReactTable({
@@ -337,6 +388,98 @@ export function ApiKeys() {
           </div>
         </div>
       </div>
+
+      {revealed && (
+        <div className="modal-overlay" onClick={() => setRevealed(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>API Key</h2>
+              <button className="btn-icon" onClick={() => setRevealed(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: '1rem', color: 'var(--text-muted)' }}>
+                Use this key in the <code>X-API-Key</code> header to authenticate your requests.
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <code
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: 'var(--bg-secondary)',
+                    borderRadius: '6px',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {revealed.value}
+                </code>
+                <button className="btn-primary" onClick={() => copyToClipboard(revealed.value, 'revealed')}>
+                  {copied === 'revealed' ? <Check size={16} /> : <Copy size={16} />}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {revealError && (
+        <div className="modal-overlay" onClick={() => setRevealError(null)}>
+          <div className="modal confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Key not revealable</h2>
+              <button className="btn-icon" onClick={() => setRevealError(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="confirm-icon-wrapper">
+                <AlertTriangle size={48} className="confirm-warning-icon" />
+              </div>
+              <p className="confirm-message">{revealError}</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setRevealError(null)}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rotateConfirm && (
+        <div className="modal-overlay" onClick={() => setRotateConfirm(null)}>
+          <div className="modal confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Rotate API key</h2>
+              <button className="btn-icon" onClick={() => setRotateConfirm(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="confirm-icon-wrapper">
+                <RotateCw size={48} className="confirm-warning-icon" />
+              </div>
+              <p className="confirm-message">
+                A new key for <strong>{rotateConfirm.name}</strong> will be issued. The old key keeps working for 24
+                hours, then stops. Continue?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setRotateConfirm(null)}>
+                {t('common.cancel')}
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => handleRotate(rotateConfirm.id)}
+                disabled={busyId === rotateConfirm.id}
+              >
+                {busyId === rotateConfirm.id ? <Loader2 size={16} className="animate-spin" /> : 'Rotate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmAction && (
         <div className="modal-overlay" onClick={() => setConfirmAction(null)}>

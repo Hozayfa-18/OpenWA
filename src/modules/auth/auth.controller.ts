@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, HttpCode, HttpStatus }
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CreateApiKeyDto, UpdateApiKeyDto, ApiKeyResponseDto, ApiKeyCreatedResponseDto } from './dto';
+import { RotateApiKeyDto } from './dto/rotate-api-key.dto';
 import { RequireRole } from './decorators/auth.decorators';
 import { ApiKeyRole } from './entities/api-key.entity';
 
@@ -107,6 +108,26 @@ export class AuthController {
   @ApiResponse({ status: 204, description: 'API key deleted' })
   async delete(@Param('id') id: string): Promise<void> {
     await this.authService.delete(id);
+  }
+
+  @Get(':id/reveal')
+  @RequireRole(ApiKeyRole.ADMIN)
+  @ApiOperation({ summary: 'Reveal the full API key (always-viewable, admin only)' })
+  @ApiResponse({ status: 200, description: 'Decrypted key' })
+  @ApiResponse({ status: 422, description: 'Key predates encryption — rotate to get a revealable key' })
+  async reveal(@Param('id') id: string): Promise<{ key: string; prefix: string }> {
+    return this.authService.reveal(id);
+  }
+
+  @Post(':id/rotate')
+  @RequireRole(ApiKeyRole.ADMIN)
+  @ApiOperation({ summary: 'Rotate an API key — new key issued, old one grace-expires (admin only)' })
+  @ApiResponse({ status: 201, description: 'New key issued' })
+  async rotate(
+    @Param('id') id: string,
+    @Body() dto: RotateApiKeyDto,
+  ): Promise<{ id: string; name: string; keyPrefix: string; apiKey: string; oldKeyId: string; oldKeyExpiresAt: Date }> {
+    return this.authService.rotate(id, dto.gracePeriodHours);
   }
 
   @Post(':id/revoke')

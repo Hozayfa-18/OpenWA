@@ -10,7 +10,7 @@ import { TenantScopeGuard } from '../../common/tenant/tenant-scope.guard';
 
 @ApiTags('messages')
 @UseGuards(TenantScopeGuard)
-@Controller('sessions/:sessionId/messages')
+@Controller(['sessions/:sessionId/messages', 'v1/sessions/:sessionId/messages'])
 export class MessageController {
   constructor(
     private readonly messageService: MessageService,

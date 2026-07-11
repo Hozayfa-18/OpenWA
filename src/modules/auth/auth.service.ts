@@ -28,10 +28,7 @@ export class AuthService implements OnModuleInit {
   ) {}
 
   /** Build the encrypted-at-rest fields for a freshly generated raw key. */
-  private encryptRawKey(rawKey: string): Pick<
-    ApiKey,
-    'keyCiphertext' | 'keyIv' | 'keyAuthTag' | 'keyEncVersion'
-  > {
+  private encryptRawKey(rawKey: string): Pick<ApiKey, 'keyCiphertext' | 'keyIv' | 'keyAuthTag' | 'keyEncVersion'> {
     const enc = this.encryption.encrypt(rawKey);
     return {
       keyCiphertext: enc.ciphertext,
@@ -182,12 +179,9 @@ export class AuthService implements OnModuleInit {
     });
   }
 
-  async createApiKeyForTenant(
-    tenantId: string,
-    dto: CreateApiKeyDto,
-  ): Promise<{ apiKey: ApiKey; rawKey: string }> {
-    const rawKey    = `owa_k1_${randomBytes(32).toString('hex')}`;
-    const keyHash   = this.hashKey(rawKey);
+  async createApiKeyForTenant(tenantId: string, dto: CreateApiKeyDto): Promise<{ apiKey: ApiKey; rawKey: string }> {
+    const rawKey = `owa_k1_${randomBytes(32).toString('hex')}`;
+    const keyHash = this.hashKey(rawKey);
     const keyPrefix = rawKey.substring(0, 8);
 
     const apiKey = this.apiKeyRepository.create({
@@ -214,12 +208,7 @@ export class AuthService implements OnModuleInit {
    */
   /** Decrypt a stored key, or 422 if it predates encryption (hash-only). */
   private decryptStoredKey(apiKey: ApiKey): { key: string; prefix: string } {
-    if (
-      apiKey.keyEncVersion == null ||
-      !apiKey.keyCiphertext ||
-      !apiKey.keyIv ||
-      !apiKey.keyAuthTag
-    ) {
+    if (apiKey.keyEncVersion == null || !apiKey.keyCiphertext || !apiKey.keyIv || !apiKey.keyAuthTag) {
       throw new UnprocessableEntityException(
         'This key was created before encryption was enabled and cannot be revealed. Rotate it to get a new, revealable key.',
       );
@@ -268,10 +257,37 @@ export class AuthService implements OnModuleInit {
     if (!oldKey) {
       throw new NotFoundException(`API key '${id}' not found`);
     }
+    return this.rotateKey(oldKey, gracePeriodHours);
+  }
 
-    const graceHours =
-      gracePeriodHours ??
-      parseInt(process.env.API_KEY_GRACE_PERIOD_HOURS ?? '24', 10);
+  /** Admin (non-tenant-scoped) rotate — used by the legacy API-key-guarded admin route. */
+  async rotate(
+    id: string,
+    gracePeriodHours?: number,
+  ): Promise<{
+    id: string;
+    name: string;
+    keyPrefix: string;
+    apiKey: string;
+    oldKeyId: string;
+    oldKeyExpiresAt: Date;
+  }> {
+    const oldKey = await this.findOne(id);
+    return this.rotateKey(oldKey, gracePeriodHours);
+  }
+
+  private async rotateKey(
+    oldKey: ApiKey,
+    gracePeriodHours?: number,
+  ): Promise<{
+    id: string;
+    name: string;
+    keyPrefix: string;
+    apiKey: string;
+    oldKeyId: string;
+    oldKeyExpiresAt: Date;
+  }> {
+    const graceHours = gracePeriodHours ?? parseInt(process.env.API_KEY_GRACE_PERIOD_HOURS ?? '24', 10);
     const now = new Date();
     const oldKeyExpiresAt = new Date(now.getTime() + Math.max(0, graceHours) * 3_600_000);
 
@@ -285,7 +301,7 @@ export class AuthService implements OnModuleInit {
       allowedIps: oldKey.allowedIps,
       allowedSessions: oldKey.allowedSessions,
       expiresAt: oldKey.expiresAt,
-      tenantId,
+      tenantId: oldKey.tenantId,
       scopes: oldKey.scopes,
       rotatedFrom: oldKey.id,
       ...this.encryptRawKey(rawKey),

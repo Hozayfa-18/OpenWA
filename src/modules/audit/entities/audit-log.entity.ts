@@ -5,6 +5,8 @@ export enum AuditAction {
   API_KEY_USED = 'api_key_used',
   API_KEY_REVOKED = 'api_key_revoked',
   API_KEY_DELETED = 'api_key_deleted',
+  API_KEY_REVEALED = 'api_key_revealed',
+  API_KEY_ROTATED = 'api_key_rotated',
   API_KEY_AUTH_FAILED = 'api_key_auth_failed',
   SESSION_CREATED = 'session_created',
   SESSION_STARTED = 'session_started',

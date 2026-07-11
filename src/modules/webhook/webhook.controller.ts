@@ -1,13 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { WebhookService } from './webhook.service';
 import { CreateWebhookDto, UpdateWebhookDto, WebhookResponseDto } from './dto';
 import { Webhook } from './entities/webhook.entity';
 import { RequireRole } from '../auth/decorators/auth.decorators';
 import { ApiKeyRole } from '../auth/entities/api-key.entity';
+import { TenantScopeGuard } from '../../common/tenant/tenant-scope.guard';
 
 @ApiTags('webhooks')
-@Controller('sessions/:sessionId/webhooks')
+@UseGuards(TenantScopeGuard)
+@Controller(['sessions/:sessionId/webhooks', 'v1/sessions/:sessionId/webhooks'])
 export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 

@@ -2,9 +2,9 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 export enum ApiKeyRole {
-  ADMIN    = 'admin',
+  ADMIN = 'admin',
   OPERATOR = 'operator',
-  VIEWER   = 'viewer',
+  VIEWER = 'viewer',
 }
 
 @Entity('api_keys')

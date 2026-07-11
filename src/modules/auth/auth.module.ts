@@ -12,6 +12,8 @@ import { Tenant } from '../tenants/entities/tenant.entity';
 import { User } from '../users/entities/user.entity';
 
 import { AuthService } from './auth.service';
+import { ApiKeyEncryptionService } from './services/api-key-encryption.service';
+import { ExpiredKeyCleanupJob } from './jobs/expired-key-cleanup.job';
 import { JwtAuthService } from './jwt-auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { EmbedJwtStrategy } from './strategies/embed-jwt.strategy';
@@ -49,6 +51,8 @@ import { ScopesGuard } from './guards/scopes.guard';
   ],
   providers: [
     AuthService,
+    ApiKeyEncryptionService,
+    ExpiredKeyCleanupJob,
     JwtAuthService,
     JwtStrategy,
     EmbedJwtStrategy,

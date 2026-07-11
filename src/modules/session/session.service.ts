@@ -18,6 +18,7 @@ import { IWhatsAppEngine, EngineStatus } from '../../engine/interfaces/whatsapp-
 import { createLogger } from '../../common/services/logger.service';
 import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
+import { CrmOutboundService } from '../crm/services/crm-outbound.service';
 import { HookManager } from '../../core/hooks';
 import { Message, MessageDirection, MessageStatus } from '../message/entities/message.entity';
 import { Conversation } from '../conversations/entities/conversation.entity';
@@ -67,6 +68,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     private readonly engineFactory: EngineFactory,
     private readonly eventsGateway: EventsGateway,
     private readonly webhookService: WebhookService,
+    private readonly crmOutboundService: CrmOutboundService,
     private readonly hookManager: HookManager,
     private readonly storageService: StorageService,
   ) {}
@@ -153,6 +155,18 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
 
   async findAll(): Promise<Session[]> {
     return this.sessionRepository.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Tenant-scoped session list. This is the only list method reachable from the
+   * public/dashboard API — callers pass the authenticated tenant so one tenant
+   * can never enumerate another's sessions.
+   */
+  async findAllForTenant(tenantId: string): Promise<Session[]> {
+    return this.sessionRepository.find({
+      where: { tenantId },
       order: { createdAt: 'DESC' },
     });
   }
@@ -438,14 +452,41 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
             }
 
             // Notify external and socket consumers only after local persistence is durable.
-            void this.webhookService.dispatch(id, 'message.received', finalMessage as Record<string, unknown>);
-            this.eventsGateway.emitMessage(id, finalMessage as Record<string, unknown>, session.tenantId);
+            // `message.received` is the legacy/internal real-time event; `message.inbound`
+            // (with the createContact lead hint) is the canonical public webhook for
+            // incoming customer messages (ADR-005).
+            void this.webhookService.dispatch(id, 'message.received', finalMessage);
+            this.eventsGateway.emitMessage(id, finalMessage, session.tenantId);
+
+            if (direction === MessageDirection.INCOMING && session.tenantId && msg.chatId) {
+              void this.crmOutboundService
+                .notifyMessageInbound({
+                  sessionId: id,
+                  tenantId: session.tenantId,
+                  chatType: 'whatsapp',
+                  chatId: msg.chatId,
+                  messageId: msg.id ?? '',
+                  body: msg.body ?? '',
+                  timestamp: msg.timestamp ?? Math.floor(Date.now() / 1000),
+                })
+                .catch((error: unknown) => {
+                  this.logger.error(
+                    'Failed to dispatch message.inbound webhook',
+                    error instanceof Error ? error.message : String(error),
+                    { sessionId: id, action: 'crm_inbound_error' },
+                  );
+                });
+            }
           })
           .catch((error: unknown) => {
-            this.logger.error('Failed to process incoming message', error instanceof Error ? error.message : String(error), {
-              sessionId: id,
-              action: 'message_received_error',
-            });
+            this.logger.error(
+              'Failed to process incoming message',
+              error instanceof Error ? error.message : String(error),
+              {
+                sessionId: id,
+                action: 'message_received_error',
+              },
+            );
           });
       },
       onDisconnected: (reason: string): void => {
@@ -640,11 +681,10 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
       await this.storageService.putFile(key, Buffer.from(media.data, 'base64'));
       return { key, mimetype: media.mimetype, filename: media.filename };
     } catch (error) {
-      this.logger.error(
-        'Failed to persist message media',
-        error instanceof Error ? error.message : String(error),
-        { sessionId, action: 'media_persist_error' },
-      );
+      this.logger.error('Failed to persist message media', error instanceof Error ? error.message : String(error), {
+        sessionId,
+        action: 'media_persist_error',
+      });
       return undefined;
     }
   }
@@ -655,8 +695,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     // sender for incoming) — never `from`, which for outgoing messages is our own
     // session number and would mislabel the conversation with our number.
     const phoneNumber =
-      (data.phoneNumber ? extractPhoneNumber(data.phoneNumber) : null) ??
-      extractPhoneNumber(data.chatId);
+      (data.phoneNumber ? extractPhoneNumber(data.phoneNumber) : null) ?? extractPhoneNumber(data.chatId);
 
     try {
       await this.conversationRepository.insert({
@@ -714,7 +753,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
   /**
    * Get overall session statistics for multi-session monitoring
    */
-  async getStats(): Promise<{
+  async getStats(tenantId: string): Promise<{
     total: number;
     active: number;
     ready: number;
@@ -722,18 +761,21 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     byStatus: Record<string, number>;
     memoryUsage: { heapUsed: number; heapTotal: number; rss: number };
   }> {
-    const sessions = await this.findAll();
+    const sessions = await this.findAllForTenant(tenantId);
     const byStatus: Record<string, number> = {};
 
     for (const session of sessions) {
       byStatus[session.status] = (byStatus[session.status] || 0) + 1;
     }
 
+    // Active count is scoped to this tenant's own sessions, not the global
+    // engine map (which spans every tenant).
+    const active = sessions.filter(s => this.engines.has(s.id)).length;
     const memory = process.memoryUsage();
 
     return {
       total: sessions.length,
-      active: this.engines.size,
+      active,
       ready: byStatus[SessionStatus.READY] || 0,
       disconnected: byStatus[SessionStatus.DISCONNECTED] || 0,
       byStatus,

@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ShutdownService } from './common/services/shutdown.service';
+import { deprecationHeaders } from './common/middleware/deprecation.middleware';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -133,6 +134,11 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
+  // Flag the legacy (unversioned) session/message/webhook routes as deprecated
+  // in favour of their /api/v1/... equivalents (ADR-001). Matches /api/sessions
+  // and everything nested under it, but never /api/v1/sessions.
+  app.use('/api/sessions', deprecationHeaders);
+
   // Enhanced Validation pipe with security options
   app.useGlobalPipes(
     new ValidationPipe({
@@ -152,6 +158,8 @@ async function bootstrap() {
     .setDescription('Open Source WhatsApp API Gateway - Free, Self-Hosted HTTP API')
     .setVersion('0.1.6')
     .addApiKey({ type: 'apiKey', name: 'X-API-Key', in: 'header' }, 'X-API-Key')
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
+    .addTag('v1/api-keys', 'Tenant API key self-service (reveal, rotate) — dashboard JWT')
     .addTag('sessions', 'WhatsApp session management')
     .addTag('messages', 'Send and manage messages')
     .addTag('webhooks', 'Webhook configuration')

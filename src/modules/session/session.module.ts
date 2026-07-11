@@ -4,6 +4,7 @@ import { Session } from './entities/session.entity';
 import { SessionService } from './session.service';
 import { SessionController } from './session.controller';
 import { WebhookModule } from '../webhook/webhook.module';
+import { CrmModule } from '../crm/crm.module';
 import { Message } from '../message/entities/message.entity';
 import { Conversation } from '../conversations/entities/conversation.entity';
 
@@ -11,6 +12,7 @@ import { Conversation } from '../conversations/entities/conversation.entity';
   imports: [
     TypeOrmModule.forFeature([Session, Message, Conversation]),
     forwardRef(() => WebhookModule),
+    CrmModule,
   ],
   controllers: [SessionController],
   providers: [SessionService],
