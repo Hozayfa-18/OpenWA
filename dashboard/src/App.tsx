@@ -1,14 +1,18 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SignedIn, SignedOut, useAuth, useOrganization, useClerk } from '@clerk/clerk-react';
 import { Loader2 } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { ToastProvider } from './components/Toast';
-import { RoleProvider, useRole, type UserRole } from './hooks/useRole';
+import { RoleProvider, useRole } from './hooks/useRole';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { setTokenGetter } from './services/api';
+import { mapClerkRoleToUi, isAdminRole } from './lib/roles';
 import './App.css';
 
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
+const Onboarding = lazy(() => import('./pages/Onboarding').then(m => ({ default: m.Onboarding })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Sessions = lazy(() => import('./pages/Sessions').then(m => ({ default: m.Sessions })));
 const Conversations = lazy(() => import('./pages/Conversations').then(m => ({ default: m.Conversations })));
