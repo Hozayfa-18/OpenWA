@@ -7,6 +7,8 @@ import { ApiKey, ApiKeyRole } from '../entities/api-key.entity';
 import { REQUIRED_ROLE_KEY, PUBLIC_KEY, ROLES_KEY } from '../decorators/auth.decorators';
 import { RequestWithTenant } from '../../../common/tenant/request-with-tenant.interface';
 import { EmbedJwtPayload } from '../strategies/embed-jwt.strategy';
+import { ClerkTokenService } from '../clerk/clerk-token.service';
+import { ClerkProvisioningService } from '../clerk/clerk-provisioning.service';
 
 const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID || '00000000-0000-0000-0000-000000000001';
 
@@ -16,6 +18,8 @@ export class ApiKeyGuard implements CanActivate {
     private readonly authService: AuthService,
     private readonly reflector: Reflector,
     private readonly jwtService: JwtService,
+    private readonly clerkToken: ClerkTokenService,
+    private readonly clerkProvisioning: ClerkProvisioningService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
