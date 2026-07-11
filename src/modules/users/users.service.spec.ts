@@ -12,6 +12,7 @@ const mockUser = (overrides: Partial<User> = {}): User => ({
   tenantId: TENANT_ID,
   email: 'alice@acme.com',
   passwordHash: 'hash',
+  clerkUserId: null,
   name: 'Alice',
   role: UserRole.SALES_REP,
   createdAt: new Date(),
