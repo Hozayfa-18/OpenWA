@@ -63,6 +63,12 @@ export default () => ({
     jwtSecret: process.env.JWT_SECRET || 'change-me-in-production',
   },
 
+  clerk: {
+    secretKey: process.env.CLERK_SECRET_KEY,
+    jwtIssuer: process.env.CLERK_JWT_ISSUER, // e.g. https://your-app.clerk.accounts.dev
+    webhookSigningSecret: process.env.CLERK_WEBHOOK_SIGNING_SECRET,
+  },
+
   storage: {
     type: process.env.STORAGE_TYPE || 'local',
     localPath: process.env.STORAGE_LOCAL_PATH || './data/media',
