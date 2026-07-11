@@ -30,6 +30,7 @@ export function Login() {
             rootBox: 'login-clerk-root',
             cardBox: 'login-clerk-cardbox',
             card: 'login-clerk-card',
+            socialButtonsBlockButton: 'login-clerk-social',
           },
         }}
       />
