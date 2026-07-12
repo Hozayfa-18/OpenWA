@@ -24,8 +24,14 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   email: string;
 
-  @Column({ type: 'varchar', length: 60 })
-  passwordHash: string;
+  /** bcrypt hash — nullable now that Clerk owns credentials for dashboard users. */
+  @Column({ type: 'varchar', length: 60, nullable: true })
+  passwordHash: string | null;
+
+  /** Clerk user id this row is linked to (null for legacy password/API-key users). */
+  @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
+  @Index()
+  clerkUserId: string | null;
 
   @Column({ type: 'varchar', length: 100 })
   name: string;

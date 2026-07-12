@@ -185,6 +185,65 @@ describe('AuthService', () => {
     });
   });
 
+  // ── tenant isolation ──────────────────────────────────────────────
+
+  describe('tenant isolation', () => {
+    const TENANT_A = 'tenant-a-uuid';
+    const TENANT_B = 'tenant-b-uuid';
+
+    it('findAllForTenant filters by the caller tenant', async () => {
+      (repository.find as jest.Mock).mockResolvedValue([]);
+
+      await service.findAllForTenant(TENANT_B);
+
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { tenantId: TENANT_B },
+        order: { createdAt: 'DESC' },
+      });
+    });
+
+    it('createApiKeyForTenant stamps the tenantId onto the new key', async () => {
+      const saved = createMockApiKey({ tenantId: TENANT_A });
+      (repository.create as jest.Mock).mockReturnValue(saved);
+      (repository.save as jest.Mock).mockResolvedValue(saved);
+
+      await service.createApiKeyForTenant(TENANT_A, { name: 'Scoped Key' });
+
+      expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ tenantId: TENANT_A }));
+    });
+
+    it('findOneForTenant queries with the tenantId and 404s across tenants', async () => {
+      (repository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findOneForTenant(TENANT_B, 'key-in-a')).rejects.toThrow(NotFoundException);
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'key-in-a', tenantId: TENANT_B } });
+    });
+
+    it('updateForTenant cannot touch another tenant key', async () => {
+      (repository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.updateForTenant(TENANT_B, 'key-in-a', { name: 'Hacked' })).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'key-in-a', tenantId: TENANT_B } });
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('revokeForTenant cannot revoke another tenant key', async () => {
+      (repository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.revokeForTenant(TENANT_B, 'key-in-a')).rejects.toThrow(NotFoundException);
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('deleteForTenant cannot delete another tenant key', async () => {
+      (repository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.deleteForTenant(TENANT_B, 'key-in-a')).rejects.toThrow(NotFoundException);
+      expect(repository.remove).not.toHaveBeenCalled();
+    });
+  });
+
   // ── validateApiKey ────────────────────────────────────────────────
 
   describe('validateApiKey', () => {

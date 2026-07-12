@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { type UserRole } from '../hooks/useRole';
+import { isAdminRole } from '../lib/roles';
 import { supportedLanguages, type SupportedLanguage } from '../i18n';
 import './Layout.css';
 
@@ -53,7 +54,7 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
   const ThemeIcon = themeIcons[theme];
   const themeLabel = t(`theme.${theme}`);
 
-  const navItems = allNavItems.filter(item => !item.adminOnly || userRole === 'admin');
+  const navItems = allNavItems.filter(item => !item.adminOnly || isAdminRole(userRole));
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);

@@ -12,6 +12,8 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth/auth.service';
+import { ClerkTokenService } from '../auth/clerk/clerk-token.service';
+import { ClerkProvisioningService } from '../auth/clerk/clerk-provisioning.service';
 import type {
   WSClientMessage,
   WSSubscribeRequest,
@@ -44,6 +46,8 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
+    private readonly clerkToken: ClerkTokenService,
+    private readonly clerkProvisioning: ClerkProvisioningService,
   ) {}
 
   afterInit() {
@@ -52,22 +56,32 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   async handleConnection(client: Socket) {
     const authHeader = client.handshake.headers.authorization;
-    const jwtToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const authFromHandshake = (client.handshake.auth as { token?: string } | undefined)?.token;
+    const jwtToken =
+      (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null) || authFromHandshake || null;
     const apiKey = (client.handshake.headers['x-api-key'] as string) || (client.handshake.query.apiKey as string);
 
     let tenantId: string | null = null;
 
     if (jwtToken) {
+      // First try a locally-signed JWT (embed / user tokens); fall back to Clerk.
       try {
         const payload = this.jwtService.verify<{ tenantId: string; sub: string }>(jwtToken);
         tenantId = payload.tenantId;
         (client.data as Record<string, unknown>).userId = payload.sub;
         (client.data as Record<string, unknown>).tenantId = tenantId;
       } catch {
-        this.logger.warn(`Client ${client.id} rejected: invalid JWT`);
-        client.emit('message', this.createError('UNAUTHORIZED', 'Invalid token'));
-        client.disconnect();
-        return;
+        const claims = await this.clerkToken.verify(jwtToken);
+        const resolved = claims ? await this.clerkProvisioning.resolveFromClaims(claims) : null;
+        if (!resolved) {
+          this.logger.warn(`Client ${client.id} rejected: invalid token`);
+          client.emit('message', this.createError('UNAUTHORIZED', 'Invalid token'));
+          client.disconnect();
+          return;
+        }
+        tenantId = resolved.tenantId;
+        (client.data as Record<string, unknown>).userId = resolved.userId;
+        (client.data as Record<string, unknown>).tenantId = tenantId;
       }
     } else if (apiKey) {
       try {

@@ -4,6 +4,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ApiKeyGuard } from './api-key.guard';
 import { AuthService } from '../auth.service';
 import { ApiKey, ApiKeyRole } from '../entities/api-key.entity';
+import { ClerkTokenService } from '../clerk/clerk-token.service';
+import { ClerkProvisioningService } from '../clerk/clerk-provisioning.service';
 
 function createMockApiKey(overrides: Partial<ApiKey> = {}): ApiKey {
   return {
@@ -58,6 +60,8 @@ describe('ApiKeyGuard', () => {
   let authService: jest.Mocked<Partial<AuthService>>;
   let reflector: jest.Mocked<Reflector>;
   let jwtService: jest.Mocked<Partial<JwtService>>;
+  let clerkToken: jest.Mocked<Partial<ClerkTokenService>>;
+  let clerkProvisioning: jest.Mocked<Partial<ClerkProvisioningService>>;
 
   beforeEach(() => {
     authService = {
@@ -75,7 +79,57 @@ describe('ApiKeyGuard', () => {
       }),
     };
 
-    guard = new ApiKeyGuard(authService as AuthService, reflector, jwtService as JwtService);
+    // By default not a Clerk token → guard falls through to embed/API-key paths.
+    clerkToken = { verify: jest.fn().mockResolvedValue(null) };
+    clerkProvisioning = { resolveFromClaims: jest.fn() };
+
+    guard = new ApiKeyGuard(
+      authService as AuthService,
+      reflector,
+      jwtService as JwtService,
+      clerkToken as ClerkTokenService,
+      clerkProvisioning as ClerkProvisioningService,
+    );
+  });
+
+  it('should accept a valid Clerk token and populate tenant context', async () => {
+    reflector.getAllAndOverride.mockReturnValueOnce(false); // not public
+
+    (clerkToken.verify as jest.Mock).mockResolvedValue({ userId: 'U', orgId: 'org', orgRole: 'org:admin' });
+    (clerkProvisioning.resolveFromClaims as jest.Mock).mockResolvedValue({
+      tenantId: 'T',
+      userId: 'U',
+      role: 'admin',
+    });
+
+    const request = {
+      headers: { authorization: 'Bearer clerk.jwt.token' },
+      params: {},
+      ip: '127.0.0.1',
+      socket: { remoteAddress: '127.0.0.1' },
+    };
+    const context = {
+      switchToHttp: () => ({ getRequest: () => request }),
+      getHandler: () => ({}),
+      getClass: () => ({}),
+    } as unknown as ExecutionContext;
+
+    const result = await guard.canActivate(context);
+
+    expect(result).toBe(true);
+    expect((request as { tenantId?: string }).tenantId).toBe('T');
+    expect((request as { userId?: string }).userId).toBe('U');
+    expect(authService.validateApiKey).not.toHaveBeenCalled();
+  });
+
+  it('should reject a Clerk user without an active organization', async () => {
+    reflector.getAllAndOverride.mockReturnValueOnce(false);
+    (clerkToken.verify as jest.Mock).mockResolvedValue({ userId: 'U' });
+    (clerkProvisioning.resolveFromClaims as jest.Mock).mockResolvedValue(null);
+
+    const context = createMockContext({ authorization: 'Bearer clerk.jwt.token' });
+
+    await expect(guard.canActivate(context)).rejects.toThrow('No active organization');
   });
 
   it('should allow access to @Public() routes without API key', async () => {

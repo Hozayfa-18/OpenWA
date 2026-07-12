@@ -5,12 +5,19 @@ import { CreateApiKeyDto, UpdateApiKeyDto, ApiKeyResponseDto, ApiKeyCreatedRespo
 import { RotateApiKeyDto } from './dto/rotate-api-key.dto';
 import { RequireRole } from './decorators/auth.decorators';
 import { ApiKeyRole } from './entities/api-key.entity';
+import { TenantContext } from '../../common/tenant/tenant-context.service';
 
+// All routes are scoped to the authenticated tenant (resolved by the global
+// ApiKeyGuard into TenantContext). Keys are never listed, read, or mutated
+// across tenant boundaries — a key owned by another tenant reads as 404.
 @ApiTags('auth')
 @ApiBearerAuth()
 @Controller('auth/api-keys')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly ctx: TenantContext,
+  ) {}
 
   @Post()
   @RequireRole(ApiKeyRole.ADMIN)
@@ -21,7 +28,7 @@ export class AuthController {
     type: ApiKeyCreatedResponseDto,
   })
   async create(@Body() dto: CreateApiKeyDto): Promise<ApiKeyCreatedResponseDto> {
-    const { apiKey, rawKey } = await this.authService.createApiKey(dto);
+    const { apiKey, rawKey } = await this.authService.createApiKeyForTenant(this.ctx.tenantId, dto);
     return {
       id: apiKey.id,
       name: apiKey.name,
@@ -43,7 +50,7 @@ export class AuthController {
   @ApiOperation({ summary: 'List all API keys (admin only)' })
   @ApiResponse({ status: 200, type: [ApiKeyResponseDto] })
   async findAll(): Promise<ApiKeyResponseDto[]> {
-    const keys = await this.authService.findAll();
+    const keys = await this.authService.findAllForTenant(this.ctx.tenantId);
     return keys.map(k => ({
       id: k.id,
       name: k.name,
@@ -64,7 +71,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get API key details (admin only)' })
   @ApiResponse({ status: 200, type: ApiKeyResponseDto })
   async findOne(@Param('id') id: string): Promise<ApiKeyResponseDto> {
-    const k = await this.authService.findOne(id);
+    const k = await this.authService.findOneForTenant(this.ctx.tenantId, id);
     return {
       id: k.id,
       name: k.name,
@@ -85,7 +92,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Update API key (admin only)' })
   @ApiResponse({ status: 200, type: ApiKeyResponseDto })
   async update(@Param('id') id: string, @Body() dto: UpdateApiKeyDto): Promise<ApiKeyResponseDto> {
-    const k = await this.authService.update(id, dto);
+    const k = await this.authService.updateForTenant(this.ctx.tenantId, id, dto);
     return {
       id: k.id,
       name: k.name,
@@ -107,7 +114,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Delete API key (admin only)' })
   @ApiResponse({ status: 204, description: 'API key deleted' })
   async delete(@Param('id') id: string): Promise<void> {
-    await this.authService.delete(id);
+    await this.authService.deleteForTenant(this.ctx.tenantId, id);
   }
 
   @Get(':id/reveal')
@@ -116,7 +123,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Decrypted key' })
   @ApiResponse({ status: 422, description: 'Key predates encryption — rotate to get a revealable key' })
   async reveal(@Param('id') id: string): Promise<{ key: string; prefix: string }> {
-    return this.authService.reveal(id);
+    return this.authService.revealForTenant(this.ctx.tenantId, id);
   }
 
   @Post(':id/rotate')
@@ -127,7 +134,7 @@ export class AuthController {
     @Param('id') id: string,
     @Body() dto: RotateApiKeyDto,
   ): Promise<{ id: string; name: string; keyPrefix: string; apiKey: string; oldKeyId: string; oldKeyExpiresAt: Date }> {
-    return this.authService.rotate(id, dto.gracePeriodHours);
+    return this.authService.rotateForTenant(this.ctx.tenantId, id, dto.gracePeriodHours);
   }
 
   @Post(':id/revoke')
@@ -135,7 +142,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Revoke API key (admin only)' })
   @ApiResponse({ status: 200, type: ApiKeyResponseDto })
   async revoke(@Param('id') id: string): Promise<ApiKeyResponseDto> {
-    const k = await this.authService.revoke(id);
+    const k = await this.authService.revokeForTenant(this.ctx.tenantId, id);
     return {
       id: k.id,
       name: k.name,

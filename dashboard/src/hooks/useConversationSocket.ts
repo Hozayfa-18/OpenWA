@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { getAuthToken } from '../services/api';
 
 interface ConversationEvent {
   tenantId: string;
@@ -24,15 +25,15 @@ export function useConversationSocket(options: UseConversationSocketOptions = {}
   });
 
   useEffect(() => {
-    const apiKey = sessionStorage.getItem('openwa_api_key');
-    if (!apiKey) return undefined;
-
     const socket: Socket = io(`${SOCKET_URL}/events`, {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      query: { apiKey },
+      // Clerk session token, fetched fresh on each (re)connect handshake.
+      auth: (cb: (data: { token: string | null }) => void) => {
+        void getAuthToken().then(token => cb({ token }));
+      },
     });
 
     const handleNew = (event: ConversationEvent) => optionsRef.current.onNew?.(event);

@@ -118,7 +118,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     this.reconnectStates.clear();
   }
 
-  async create(dto: CreateSessionDto): Promise<Session> {
+  async create(dto: CreateSessionDto, tenantId: string): Promise<Session> {
     // Check if session with same name exists
     const existing = await this.sessionRepository.findOne({
       where: { name: dto.name },
@@ -129,6 +129,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     }
 
     const session = this.sessionRepository.create({
+      tenantId,
       name: dto.name,
       config: dto.config || {},
       proxyUrl: dto.proxyUrl || null,

@@ -18,6 +18,7 @@ const userInA: User = {
   tenantId: TENANT_A,
   email: 'alice@a.com',
   passwordHash: 'hash',
+  clerkUserId: null,
   name: 'Alice',
   role: UserRole.SALES_REP,
   createdAt: new Date(),

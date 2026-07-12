@@ -17,11 +17,15 @@ import { ExpiredKeyCleanupJob } from './jobs/expired-key-cleanup.job';
 import { JwtAuthService } from './jwt-auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { EmbedJwtStrategy } from './strategies/embed-jwt.strategy';
+import { ClerkTokenService } from './clerk/clerk-token.service';
+import { ClerkProvisioningService } from './clerk/clerk-provisioning.service';
+import { ClerkApiService } from './clerk/clerk-api.service';
 
 import { AuthController } from './auth.controller';
 import { AuthValidateController } from './auth-validate.controller';
 import { V1AuthController } from './controllers/v1-auth.controller';
 import { V1ApiKeysController } from './controllers/v1-api-keys.controller';
+import { ClerkWebhookController } from './clerk/clerk-webhook.controller';
 
 import { ApiKeyGuard } from './guards/api-key.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -48,6 +52,7 @@ import { ScopesGuard } from './guards/scopes.guard';
     AuthValidateController,
     V1AuthController,
     V1ApiKeysController,
+    ClerkWebhookController,
   ],
   providers: [
     AuthService,
@@ -56,6 +61,9 @@ import { ScopesGuard } from './guards/scopes.guard';
     JwtAuthService,
     JwtStrategy,
     EmbedJwtStrategy,
+    ClerkTokenService,
+    ClerkProvisioningService,
+    ClerkApiService,
     JwtAuthGuard,
     RolesGuard,
     ScopesGuard,
@@ -68,6 +76,14 @@ import { ScopesGuard } from './guards/scopes.guard';
       useClass: ApiKeyGuard,
     },
   ],
-  exports: [AuthService, JwtAuthService, JwtAuthGuard, RolesGuard, ScopesGuard],
+  exports: [
+    AuthService,
+    JwtAuthService,
+    JwtAuthGuard,
+    RolesGuard,
+    ScopesGuard,
+    ClerkTokenService,
+    ClerkProvisioningService,
+  ],
 })
 export class AuthModule {}

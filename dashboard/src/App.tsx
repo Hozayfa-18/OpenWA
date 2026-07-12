@@ -38,59 +38,20 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  // Initialize from sessionStorage to avoid setState in effect
-  const savedKey = sessionStorage.getItem('openwa_api_key');
-  const [isAuthenticated, setIsAuthenticated] = useState(!!savedKey);
-  const [, setApiKey] = useState(savedKey || '');
+  const { isLoaded, orgId, getToken } = useAuth();
+  const { membership } = useOrganization();
+  const { signOut } = useClerk();
   const { setRole, role } = useRole();
 
-  const handleLogin = async (key: string) => {
-    setApiKey(key);
-    sessionStorage.setItem('openwa_api_key', key);
-
-    // Fetch the role from API
-    try {
-      const response = await fetch('/api/auth/validate', {
-        method: 'POST',
-        headers: { 'X-API-Key': key },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setRole(data.role as UserRole);
-      }
-    } catch {
-      // Default to viewer if we can't fetch role
-      setRole('viewer');
-    }
-
-    setIsAuthenticated(true);
-  };
-
-  const handleLogout = () => {
-    setApiKey('');
-    setIsAuthenticated(false);
-    setRole(null);
-    sessionStorage.removeItem('openwa_api_key');
-  };
-
-  // Re-validate and get role on mount if already authenticated
+  // Feed the Clerk session token to the (non-React) API client for every request.
   useEffect(() => {
-    if (!savedKey) return;
+    setTokenGetter(() => getToken());
+  }, [getToken]);
 
-    fetch('/api/auth/validate', {
-      method: 'POST',
-      headers: { 'X-API-Key': savedKey },
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.valid && data.role) {
-          setRole(data.role as UserRole);
-        }
-      })
-      .catch(() => {
-        // Keep existing role from localStorage if validation fails
-      });
-  }, [savedKey, setRole]);
+  // Mirror the Clerk org role into the RBAC context used by the UI gates.
+  useEffect(() => {
+    if (membership?.role) setRole(mapClerkRoleToUi(membership.role));
+  }, [membership?.role, setRole]);
 
   const loadingFallback = (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
@@ -98,32 +59,41 @@ function AppContent() {
     </div>
   );
 
-  if (!isAuthenticated) {
-    return <Suspense fallback={loadingFallback}><Login onLogin={handleLogin} /></Suspense>;
-  }
+  if (!isLoaded) return loadingFallback;
 
   return (
-    <ToastProvider>
-      <BrowserRouter>
-        <Suspense fallback={loadingFallback}>
-        <Routes>
-          <Route path="/" element={<Layout onLogout={handleLogout} userRole={role} />}>
-            <Route index element={<Dashboard />} />
-            <Route path="sessions" element={<Sessions />} />
-            <Route path="conversations" element={<Conversations />} />
-            <Route path="crm-chat" element={<CrmChat />} />
-            <Route path="webhooks" element={<Webhooks />} />
-            {role === 'admin' && <Route path="api-keys" element={<ApiKeys />} />}
-            <Route path="logs" element={<Logs />} />
-            <Route path="message-tester" element={<MessageTester />} />
-            <Route path="infrastructure" element={<Infrastructure />} />
-            {role === 'admin' && <Route path="plugins" element={<Plugins />} />}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </ToastProvider>
+    <>
+      <SignedOut>
+        <Suspense fallback={loadingFallback}><Login /></Suspense>
+      </SignedOut>
+      <SignedIn>
+        {!orgId ? (
+          <Suspense fallback={loadingFallback}><Onboarding /></Suspense>
+        ) : (
+          <ToastProvider>
+            <BrowserRouter>
+              <Suspense fallback={loadingFallback}>
+                <Routes>
+                  <Route path="/" element={<Layout onLogout={() => void signOut()} userRole={role} />}>
+                    <Route index element={<Dashboard />} />
+                    <Route path="sessions" element={<Sessions />} />
+                    <Route path="conversations" element={<Conversations />} />
+                    <Route path="crm-chat" element={<CrmChat />} />
+                    <Route path="webhooks" element={<Webhooks />} />
+                    {isAdminRole(role) && <Route path="api-keys" element={<ApiKeys />} />}
+                    <Route path="logs" element={<Logs />} />
+                    <Route path="message-tester" element={<MessageTester />} />
+                    <Route path="infrastructure" element={<Infrastructure />} />
+                    {isAdminRole(role) && <Route path="plugins" element={<Plugins />} />}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Route>
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </ToastProvider>
+        )}
+      </SignedIn>
+    </>
   );
 }
 

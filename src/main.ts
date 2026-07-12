@@ -72,7 +72,9 @@ STORAGE_PATH=./data/media
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true exposes req.rawBody so the Clerk webhook can verify Svix signatures
+  // against the exact received bytes.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Enable shutdown hooks for graceful shutdown
   app.enableShutdownHooks();

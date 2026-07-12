@@ -6,8 +6,8 @@ import {
   HttpCode,
   HttpStatus,
   BadRequestException,
-  RawBodyRequest,
 } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Webhook } from 'svix';
 import type { Request } from 'express';

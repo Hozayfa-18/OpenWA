@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getAuthToken } from '../services/api';
 
 interface SessionStatusEvent {
   sessionId: string;

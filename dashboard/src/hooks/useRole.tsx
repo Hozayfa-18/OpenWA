@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import type { UserRole, RoleContextType } from '../types/role';
+import { isAdminRole, canWriteRole } from '../lib/roles';
 
 export type { UserRole, RoleContextType } from '../types/role';
 
@@ -23,10 +24,8 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   const value: RoleContextType = {
     role,
     setRole,
-    isAdmin: role === 'admin',
-    isOperator: role === 'operator',
-    isViewer: role === 'viewer',
-    canWrite: role === 'admin' || role === 'operator',
+    isAdmin: isAdminRole(role),
+    canWrite: canWriteRole(role),
   };
 
   return <RoleContext.Provider value={value}>{children}</RoleContext.Provider>;

@@ -43,6 +43,24 @@ export class ApiKeyGuard implements CanActivate {
     }
 
     const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+
+    // Clerk session JWT (dashboard humans). Verify via JWKS, then resolve tenant/user.
+    // Runs before the embed/API-key paths but only claims the request if it's a
+    // genuine Clerk token; otherwise falls through unchanged.
+    if (bearer && !request.headers['x-api-key']) {
+      const claims = await this.clerkToken.verify(bearer);
+      if (claims) {
+        const resolved = await this.clerkProvisioning.resolveFromClaims(claims);
+        if (!resolved) {
+          throw new UnauthorizedException('No active organization for this user');
+        }
+        request.tenantId = resolved.tenantId;
+        request.userId = resolved.userId;
+        request.userRole = resolved.role;
+        return true;
+      }
+    }
+
     if (bearer && !request.headers['x-api-key']) {
       try {
         const payload = this.jwtService.verify<EmbedJwtPayload>(bearer);

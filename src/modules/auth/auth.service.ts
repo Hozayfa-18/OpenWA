@@ -356,6 +356,31 @@ export class AuthService implements OnModuleInit {
     await this.apiKeyRepository.remove(key);
   }
 
+  /** Fetch a single key, scoped to the owning tenant. 404 if it belongs to another tenant. */
+  async findOneForTenant(tenantId: string, id: string): Promise<ApiKey> {
+    const key = await this.apiKeyRepository.findOne({ where: { id, tenantId } });
+    if (!key) throw new NotFoundException(`API key with id '${id}' not found`);
+    return key;
+  }
+
+  async updateForTenant(tenantId: string, id: string, dto: UpdateApiKeyDto): Promise<ApiKey> {
+    const apiKey = await this.findOneForTenant(tenantId, id);
+
+    if (dto.name) apiKey.name = dto.name;
+    if (dto.role) apiKey.role = dto.role;
+    if (dto.allowedIps !== undefined) apiKey.allowedIps = dto.allowedIps;
+    if (dto.allowedSessions !== undefined) apiKey.allowedSessions = dto.allowedSessions;
+    if (dto.expiresAt !== undefined) apiKey.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
+
+    return this.apiKeyRepository.save(apiKey);
+  }
+
+  async revokeForTenant(tenantId: string, id: string): Promise<ApiKey> {
+    const apiKey = await this.findOneForTenant(tenantId, id);
+    apiKey.isActive = false;
+    return this.apiKeyRepository.save(apiKey);
+  }
+
   async revoke(id: string): Promise<ApiKey> {
     const apiKey = await this.findOne(id);
     apiKey.isActive = false;

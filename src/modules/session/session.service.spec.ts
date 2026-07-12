@@ -146,7 +146,7 @@ describe('SessionService', () => {
       (repository.create as jest.Mock).mockReturnValue(session);
       (repository.save as jest.Mock).mockResolvedValue(session);
 
-      const result = await service.create({ name: 'test-session' });
+      const result = await service.create({ name: 'test-session' }, 'tenant-abc');
 
       expect(result.name).toBe('test-session');
       expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ status: SessionStatus.CREATED }));
@@ -157,10 +157,20 @@ describe('SessionService', () => {
       );
     });
 
+    it('should persist the caller tenant id, not the DB default', async () => {
+      (repository.findOne as jest.Mock).mockResolvedValue(null); // no duplicate
+      (repository.create as jest.Mock).mockImplementation((data: Partial<Session>) => createMockSession(data));
+      (repository.save as jest.Mock).mockImplementation((s: Session) => Promise.resolve(s));
+
+      await service.create({ name: 'test-session' }, 'tenant-abc');
+
+      expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-abc' }));
+    });
+
     it('should throw ConflictException if session name already exists', async () => {
       (repository.findOne as jest.Mock).mockResolvedValue(createMockSession());
 
-      await expect(service.create({ name: 'test-session' })).rejects.toThrow(ConflictException);
+      await expect(service.create({ name: 'test-session' }, 'tenant-abc')).rejects.toThrow(ConflictException);
     });
   });
 

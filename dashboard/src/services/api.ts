@@ -177,15 +177,30 @@ export interface Settings {
 // API Client
 // =============================================================================
 
+// Clerk token getter, injected once at app init (see App.tsx). Lets this non-React
+// module obtain a fresh session token for every request without reaching into React.
+let tokenGetter: (() => Promise<string | null>) | null = null;
+export const setTokenGetter = (fn: () => Promise<string | null>): void => {
+  tokenGetter = fn;
+};
+
+/** Current Clerk session token, or null when signed out. */
+export async function getAuthToken(): Promise<string | null> {
+  return tokenGetter ? tokenGetter() : null;
+}
+
+/** Authorization header carrying the current Clerk session token, if signed in. */
+export async function authHeaders(): Promise<Record<string, string>> {
+  const token = await getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  // Get API key from sessionStorage for authentication
-  const apiKey = sessionStorage.getItem('openwa_api_key');
-
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(apiKey ? { 'X-API-Key': apiKey } : {}),
+    ...(await authHeaders()),
     ...options.headers,
   };
 
@@ -347,8 +362,8 @@ export const messageApi = {
 // Media bytes sit behind authenticated endpoints, so a plain <img>/<audio> src
 // can't load them (the browser won't attach our auth header). Fetch with the
 // header and hand back an object URL the caller must revoke when done.
-async function fetchMediaObjectUrl(endpoint: string, authHeaders: Record<string, string>): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers: authHeaders });
+async function fetchMediaObjectUrl(endpoint: string, headers: Record<string, string>): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
@@ -363,10 +378,10 @@ export const conversationApi = {
   list: () => request<Conversation[]>('/v1/conversations'),
   messages: (sessionId: string, chatId: string) =>
     request<ChatMessage[]>(`/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/messages`),
-  mediaUrl: (sessionId: string, chatId: string, messageId: string) =>
+  mediaUrl: async (sessionId: string, chatId: string, messageId: string) =>
     fetchMediaObjectUrl(
       `/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/media`,
-      sessionStorage.getItem('openwa_api_key') ? { 'X-API-Key': sessionStorage.getItem('openwa_api_key')! } : {},
+      await authHeaders(),
     ),
   assign: (sessionId: string, chatId: string, userId: string) =>
     request<void>(`/v1/conversations/${encodeURIComponent(sessionId)}/${encodeURIComponent(chatId)}/assign`, {
